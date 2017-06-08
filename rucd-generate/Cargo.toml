@@ -1,0 +1,24 @@
+[package]
+publish = false
+name = "rucd-generate"
+version = "0.0.1"  #:version
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+description = """
+A program for generating packed representations of the Unicode character
+database that can be efficiently searched.
+"""
+documentation = "https://github.com/BurntSushi/rucd"
+homepage = "https://github.com/BurntSushi/rucd"
+repository = "https://github.com/BurntSushi/rucd"
+readme = "README.md"
+keywords = ["unicode", "database", "character", "search", "fst"]
+license = "Unlicense/MIT"
+
+[dependencies]
+clap = "2"
+fst = "0.2"
+regex = "0.2"
+ucd-parse = { version = "0.0.1", path = "../ucd-parse" }
+
+[profile.release]
+debug = true
