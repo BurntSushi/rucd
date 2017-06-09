@@ -1,6 +1,7 @@
 // This module defines various common value types used throughout the UCD.
 
 use std::char;
+use std::fmt;
 use std::str::FromStr;
 
 use error::Error;
@@ -48,5 +49,11 @@ impl FromStr for Codepoint {
                     s, err);
             }
         }
+    }
+}
+
+impl fmt::Display for Codepoint {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:04X}", self.0)
     }
 }

@@ -1,5 +1,8 @@
 use std::borrow::Cow;
+use std::fmt;
+use std::fs::File;
 use std::io::{self, BufRead};
+use std::path::Path;
 use std::str::FromStr;
 
 use regex::Regex;
@@ -13,6 +16,18 @@ pub struct UnicodeDataParser<R> {
     rdr: io::BufReader<R>,
     line: String,
     line_number: u64,
+}
+
+impl UnicodeDataParser<File> {
+    /// Create a new parser for UnicodeData from the given path to the
+    /// Unicode data directory.
+    pub fn from_dir<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<UnicodeDataParser<File>, Error> {
+        let path = path.as_ref().join("UnicodeData.txt");
+        let file = File::open(path)?;
+        Ok(UnicodeDataParser::new(file))
+    }
 }
 
 impl<R: io::Read> UnicodeDataParser<R> {
@@ -103,9 +118,7 @@ pub struct UnicodeData<'a> {
     pub simple_uppercase_mapping: Option<Codepoint>,
     /// This codepoint's simple lowercase mapping, if it exists.
     pub simple_lowercase_mapping: Option<Codepoint>,
-    /// This codepoint's simple titlecase mapping, if it exists. When absent
-    /// in `UnicodeData.txt`, this is populated with the value of
-    /// `simple_uppercase_mapping`.
+    /// This codepoint's simple titlecase mapping, if it exists.
     pub simple_titlecase_mapping: Option<Codepoint>,
 }
 
@@ -190,8 +203,6 @@ impl<'a> UnicodeData<'a> {
         }
         if !capget(15).is_empty() {
             data.simple_titlecase_mapping = Some(capget(15).parse()?);
-        } else {
-            data.simple_titlecase_mapping = data.simple_uppercase_mapping;
         }
         Ok(data)
     }
@@ -224,6 +235,55 @@ impl FromStr for UnicodeData<'static> {
 
     fn from_str(s: &str) -> Result<UnicodeData<'static>, Error> {
         UnicodeData::parse_line(s).map(|x| x.into_owned())
+    }
+}
+
+impl<'a> fmt::Display for UnicodeData<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{};", self.codepoint)?;
+        write!(f, "{};", self.name)?;
+        write!(f, "{};", self.general_category)?;
+        write!(f, "{};", self.canonical_combining_class)?;
+        write!(f, "{};", self.bidi_class)?;
+        if self.decomposition.is_canonical()
+            && self.decomposition.mapping() == &[self.codepoint]
+        {
+            write!(f, ";")?;
+        } else {
+            write!(f, "{};", self.decomposition)?;
+        }
+        if let Some(n) = self.numeric_type_decimal {
+            write!(f, "{};", n)?;
+        } else {
+            write!(f, ";")?;
+        }
+        if let Some(n) = self.numeric_type_digit {
+            write!(f, "{};", n)?;
+        } else {
+            write!(f, ";")?;
+        }
+        if let Some(n) = self.numeric_type_numeric {
+            write!(f, "{};", n)?;
+        } else {
+            write!(f, ";")?;
+        }
+        write!(f, "{};", if self.bidi_mirrored { "Y" } else { "N" })?;
+        write!(f, "{};", self.unicode1_name)?;
+        write!(f, "{};", self.iso_comment)?;
+        if let Some(cp) = self.simple_uppercase_mapping {
+            write!(f, "{};", cp)?;
+        } else {
+            write!(f, ";")?;
+        }
+        if let Some(cp) = self.simple_lowercase_mapping {
+            write!(f, "{};", cp)?;
+        } else {
+            write!(f, ";")?;
+        }
+        if let Some(cp) = self.simple_titlecase_mapping {
+            write!(f, "{}", cp)?;
+        }
+        Ok(())
     }
 }
 
@@ -269,6 +329,12 @@ impl UnicodeDataDecomposition {
         Ok(())
     }
 
+    /// Return the mapping as a slice of codepoints. The slice returned
+    /// has length equivalent to the number of codepoints in this mapping.
+    pub fn mapping(&self) -> &[Codepoint] {
+        &self.mapping[..self.len]
+    }
+
     /// Returns true if and only if this decomposition mapping is canonical.
     pub fn is_canonical(&self) -> bool {
         self.tag.is_none()
@@ -304,6 +370,23 @@ impl FromStr for UnicodeDataDecomposition {
             decomp.push(cp)?;
         }
         Ok(decomp)
+    }
+}
+
+impl fmt::Display for UnicodeDataDecomposition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(ref tag) = self.tag {
+            write!(f, "<{}> ", tag)?;
+        }
+        let mut first = true;
+        for cp in self.mapping() {
+            if !first {
+                write!(f, " ")?;
+            }
+            first = false;
+            write!(f, "{}", cp)?;
+        }
+        Ok(())
     }
 }
 
@@ -374,10 +457,35 @@ impl FromStr for UnicodeDataDecompositionTag {
     }
 }
 
+impl fmt::Display for UnicodeDataDecompositionTag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::UnicodeDataDecompositionTag::*;
+        let s = match *self {
+            Font => "font",
+            NoBreak => "noBreak",
+            Initial => "initial",
+            Medial => "medial",
+            Final => "final",
+            Isolated => "isolated",
+            Circle => "circle",
+            Super => "super",
+            Sub => "sub",
+            Vertical => "vertical",
+            Wide => "wide",
+            Narrow => "narrow",
+            Small => "small",
+            Square => "square",
+            Fraction => "fraction",
+            Compat => "compat",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 /// A numeric value corresponding to characters with `Numeric_Type=Numeric`.
 ///
 /// A numeric value can either be a signed integer or a rational number.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UnicodeDataNumeric {
     /// An integer.
     Integer(i64),
@@ -419,6 +527,15 @@ impl FromStr for UnicodeDataNumeric {
                         "invalid integer denominator '{}': {}", s, err);
                 }
             }
+        }
+    }
+}
+
+impl fmt::Display for UnicodeDataNumeric {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            UnicodeDataNumeric::Integer(n) => write!(f, "{}", n),
+            UnicodeDataNumeric::Rational(n, d) => write!(f, "{}/{}", n, d),
         }
     }
 }
