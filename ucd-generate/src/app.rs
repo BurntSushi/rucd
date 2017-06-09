@@ -26,7 +26,7 @@ OPTIONS:
 {unified}";
 
 const ABOUT: &'static str = "
-rucd-generate is a tool that generates Rust source files containing various
+ucd-generate is a tool that generates Rust source files containing various
 Unicode tables.
 
 Unicode tables are typically represented by finite state transducers, which
@@ -54,7 +54,7 @@ pub fn app() -> App<'static, 'static> {
         .before_help(ABOUT_TEST_UNICODE_DATA)
         .arg(ucd_dir);
 
-    App::new("rucd-generate")
+    App::new("ucd-generate")
         .author(crate_authors!())
         .version(crate_version!())
         .about(ABOUT)
