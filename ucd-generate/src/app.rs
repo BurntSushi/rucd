@@ -35,10 +35,16 @@ permits fast searching while simultaneously compressing the table.
 Project home page: https://github.com/BurntSushi/rucd";
 
 const ABOUT_JAMO_SHORT_NAME: &'static str = "\
-jamo-short-name parses the UCD's Jamo.txt file and emits its contents as an
-FST table. The FST corresponds to a map from a Unicode codepoint (encoded as
-a big-endian u32) to a u64, where the u64 contains the Jamo_Short_Name property
-value. The value is encoded in the least significant bytes (up to 3).
+jamo-short-name parses the UCD's Jamo.txt file and emits its contents as a
+slice table. The slice consists of a sorted sequences of pairs, where each
+pair corresponds to the codepoint and the Jamo_Short_Name property value.
+
+When emitted as an FST table, the FST corresponds to a map from a Unicode
+codepoint (encoded as a big-endian u32) to a u64, where the u64 contains the
+Jamo_Short_Name property value. The value is encoded in the least significant
+bytes (up to 3).
+
+Since the table is so small, the slice table is faster to search.
 ";
 
 const ABOUT_TEST_UNICODE_DATA: &'static str = "\
@@ -58,13 +64,16 @@ pub fn app() -> App<'static, 'static> {
             .takes_value(true)
             .default_value(default)
     };
+    let flag_rust_fst = Arg::with_name("rust-fst")
+        .long("rust-fst")
+        .help("Emit the table as a FST in Rust source codeto stdout.");
     let flag_raw_fst = Arg::with_name("raw-fst")
         .long("raw-fst")
         .help("Emit the table as a raw FST to stdout.\n\
                Pro-tip: Run `cargo install fst-bin` to install the `fst`
                command line tool, which can be used to search the FST.");
-    let flag_slice_table = Arg::with_name("slice-table")
-        .long("slice-table")
+    let flag_rust_slice = Arg::with_name("rust-slice")
+        .long("rust-slice")
         .help("Emit the table as a static slice that can be binary searched.");
     let ucd_dir = Arg::with_name("ucd-dir")
         .required(true)
@@ -79,7 +88,8 @@ pub fn app() -> App<'static, 'static> {
         .before_help(ABOUT_JAMO_SHORT_NAME)
         .arg(ucd_dir.clone())
         .arg(flag_name("JAMO_SHORT_NAME"))
-        .arg(flag_slice_table.clone())
+        .arg(flag_rust_slice.clone())
+        .arg(flag_rust_fst.clone())
         .arg(flag_raw_fst.clone());
 
     let cmd_test_unicode_data = SubCommand::with_name("test-unicode-data")

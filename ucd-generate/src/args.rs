@@ -32,7 +32,11 @@ impl<'a> ArgMatches<'a> {
         self.value_of("name").expect("the name of the table")
     }
 
-    pub fn write_fst<W: io::Write>(
+    pub fn wants_fst(&self) -> bool {
+        self.is_present("raw-fst") || self.is_present("rust-fst")
+    }
+
+    pub fn write_fst_map<W: io::Write>(
         &self,
         mut wtr: W,
         name: &str,
@@ -41,7 +45,7 @@ impl<'a> ArgMatches<'a> {
         if self.is_present("raw-fst") {
             wtr.write_all(&fst.to_vec())?;
         } else {
-            util::write_fst(wtr, name, &fst)?;
+            util::write_fst_map(wtr, name, &fst)?;
         }
         Ok(())
     }
