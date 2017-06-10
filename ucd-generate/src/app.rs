@@ -34,6 +34,13 @@ permits fast searching while simultaneously compressing the table.
 
 Project home page: https://github.com/BurntSushi/rucd";
 
+const ABOUT_JAMO_SHORT_NAME: &'static str = "\
+jamo-short-name parses the UCD's Jamo.txt file and emits its contents as an
+FST table. The FST corresponds to a map from a Unicode codepoint (encoded as
+a big-endian u32) to a u64, where the u64 contains the Jamo_Short_Name property
+value. The value is encoded in the least significant bytes (up to 3).
+";
+
 const ABOUT_TEST_UNICODE_DATA: &'static str = "\
 test-unicode-data parses the UCD's UnicodeData.txt file and emits its contents
 on stdout. The purpose of this command is to diff the output with the input and
@@ -43,8 +50,37 @@ parser.
 
 /// Build a clap application.
 pub fn app() -> App<'static, 'static> {
+    // Various common flags and arguments.
+    let flag_name = |default| {
+        Arg::with_name("name")
+            .help("Set the name of the table in the emitted code.")
+            .long("name")
+            .takes_value(true)
+            .default_value(default)
+    };
+    let flag_raw_fst = Arg::with_name("raw-fst")
+        .long("raw-fst")
+        .help("Emit the table as a raw FST to stdout.\n\
+               Pro-tip: Run `cargo install fst-bin` to install the `fst`
+               command line tool, which can be used to search the FST.");
+    let flag_slice_table = Arg::with_name("slice-table")
+        .long("slice-table")
+        .help("Emit the table as a static slice that can be binary searched.");
     let ucd_dir = Arg::with_name("ucd-dir")
+        .required(true)
         .help("Directory containing the Unicode character database files.");
+
+    // Subcommands.
+    let cmd_jamo_short_name = SubCommand::with_name("jamo-short-name")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create the Jamo_Short_Name property table.")
+        .before_help(ABOUT_JAMO_SHORT_NAME)
+        .arg(ucd_dir.clone())
+        .arg(flag_name("JAMO_SHORT_NAME"))
+        .arg(flag_slice_table.clone())
+        .arg(flag_raw_fst.clone());
 
     let cmd_test_unicode_data = SubCommand::with_name("test-unicode-data")
         .author(crate_authors!())
@@ -52,8 +88,9 @@ pub fn app() -> App<'static, 'static> {
         .template(TEMPLATE_SUB)
         .about("Test the UnicodeData.txt parser.")
         .before_help(ABOUT_TEST_UNICODE_DATA)
-        .arg(ucd_dir);
+        .arg(ucd_dir.clone());
 
+    // The actual App.
     App::new("ucd-generate")
         .author(crate_authors!())
         .version(crate_version!())
@@ -61,5 +98,6 @@ pub fn app() -> App<'static, 'static> {
         .template(TEMPLATE)
         .max_term_width(100)
         .setting(AppSettings::UnifiedHelpMessage)
+        .subcommand(cmd_jamo_short_name)
         .subcommand(cmd_test_unicode_data)
 }

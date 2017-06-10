@@ -1,9 +1,12 @@
 use std::ffi::OsStr;
+use std::io;
 use std::ops;
 
 use clap;
+use fst::raw::Fst;
 
 use error::Result;
+use util;
 
 /// Wraps clap matches and provides convenient accessors to various parameters.
 pub struct ArgMatches<'a>(&'a clap::ArgMatches<'a>);
@@ -23,5 +26,23 @@ impl<'a> ArgMatches<'a> {
             Some(x) => Ok(x),
             None => err!("missing UCD directory"),
         }
+    }
+
+    pub fn name(&self) -> &str {
+        self.value_of("name").expect("the name of the table")
+    }
+
+    pub fn write_fst<W: io::Write>(
+        &self,
+        mut wtr: W,
+        name: &str,
+        fst: &Fst,
+    ) -> Result<()> {
+        if self.is_present("raw-fst") {
+            wtr.write_all(&fst.to_vec())?;
+        } else {
+            util::write_fst(wtr, name, &fst)?;
+        }
+        Ok(())
     }
 }

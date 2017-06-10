@@ -1,0 +1,97 @@
+use std::borrow::Cow;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+
+use regex::Regex;
+
+use common::{Codepoint, UcdLineDatum};
+use error::Error;
+
+/// A single row in the `Jamo.txt` file.
+///
+/// The `Jamo.txt` file defines the `Jamo_Short_Name` property.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct JamoShortName<'a> {
+    /// The codepoint corresponding to this row.
+    pub codepoint: Codepoint,
+    /// The actual "Jamo Short Name." This string contains at most 3 bytes and
+    /// may be empty.
+    pub name: Cow<'a, str>,
+}
+
+impl<'a> JamoShortName<'a> {
+    /// The file path to `Jamo.txt` based on the directory given.
+    pub fn from_dir<P: AsRef<Path>>(dir: P) -> PathBuf {
+        dir.as_ref().join(Self::file_name())
+    }
+
+    /// The file name in the UCD corresponding to where this datum resides.
+    pub fn file_name() -> &'static OsStr {
+        OsStr::new("Jamo.txt")
+    }
+
+    /// Convert this record into an owned value such that it no longer
+    /// borrows from the original line that it was parsed from.
+    pub fn into_owned(self) -> JamoShortName<'static> {
+        JamoShortName {
+            codepoint: self.codepoint,
+            name: Cow::Owned(self.name.into_owned()),
+        }
+    }
+}
+
+impl<'a> UcdLineDatum<'a> for JamoShortName<'a> {
+    fn parse_line(line: &'a str) -> Result<JamoShortName<'a>, Error> {
+        lazy_static! {
+            static ref PARTS: Regex = Regex::new(
+                r"(?x)
+                ^
+                (?P<codepoint>[A-Z0-9]+);
+                \s*
+                (?P<name>[A-Z]*)
+                "
+            ).unwrap();
+        };
+
+        let caps = match PARTS.captures(line.trim()) {
+            Some(caps) => caps,
+            None => return err!("invalid Jamo_Short_name line"),
+        };
+        // datum.codepoint = caps["codepoint"].parse()?;
+        // datum.name = Cow::Borrowed(caps.name("name").unwrap().as_str());
+        Ok(JamoShortName {
+            codepoint: caps["codepoint"].parse()?,
+            name: Cow::Borrowed(caps.name("name").unwrap().as_str()),
+        })
+    }
+}
+
+impl FromStr for JamoShortName<'static> {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<JamoShortName<'static>, Error> {
+        JamoShortName::parse_line(s).map(|x| x.into_owned())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::JamoShortName;
+
+    #[test]
+    fn parse1() {
+        let line = "1164; YAE # HANGUL JUNGSEONG YAE\n";
+        let row: JamoShortName = line.parse().unwrap();
+        assert_eq!(row.codepoint, 0x1164);
+        assert_eq!(row.name, "YAE");
+    }
+
+    #[test]
+    fn parse2() {
+        let line = "110B;     # HANGUL CHOSEONG IEUNG\n";
+        let row: JamoShortName = line.parse().unwrap();
+        assert_eq!(row.codepoint, 0x110B);
+        assert_eq!(row.name, "");
+    }
+}

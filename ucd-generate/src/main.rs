@@ -1,11 +1,13 @@
+extern crate byteorder;
 #[macro_use]
 extern crate clap;
+extern crate fst;
 extern crate ucd_parse;
 
 use std::io::{self, Write};
 use std::process;
 
-use ucd_parse::UnicodeDataParser;
+use ucd_parse::{UcdLineParser, UnicodeData};
 
 use args::ArgMatches;
 use error::Result;
@@ -26,6 +28,9 @@ macro_rules! err {
 mod app;
 mod args;
 mod error;
+mod util;
+
+mod jamo_short_name;
 
 fn main() {
     if let Err(err) = run() {
@@ -40,6 +45,9 @@ fn main() {
 fn run() -> Result<()> {
     let matches = app::app().get_matches();
     match matches.subcommand() {
+        ("jamo-short-name", Some(m)) => {
+            jamo_short_name::command(ArgMatches::new(m))
+        }
         ("test-unicode-data", Some(m)) => {
             cmd_test_unicode_data(ArgMatches::new(m))
         }
@@ -53,12 +61,11 @@ fn run() -> Result<()> {
 }
 
 fn cmd_test_unicode_data(args: ArgMatches) -> Result<()> {
-    let mut stdout = io::stdout();
-
     let dir = args.ucd_dir()?;
-    let mut parser = UnicodeDataParser::from_dir(dir).unwrap();
+    let mut parser = UcdLineParser::from_path(UnicodeData::from_dir(dir))?;
+    let mut stdout = io::stdout();
     while let Some(result) = parser.parse_next() {
-        let x = result.unwrap();
+        let x: UnicodeData = result?;
         writeln!(stdout, "{}", x)?;
     }
     Ok(())

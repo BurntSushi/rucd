@@ -3,7 +3,9 @@ use std::fmt;
 use std::io;
 use std::result;
 
+use fst;
 use clap;
+use ucd_parse;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -60,5 +62,17 @@ impl From<io::Error> for Error {
 impl From<clap::Error> for Error {
     fn from(err: clap::Error) -> Error {
         Error::Clap(err)
+    }
+}
+
+impl From<fst::Error> for Error {
+    fn from(err: fst::Error) -> Error {
+        Error::Other(err.to_string())
+    }
+}
+
+impl From<ucd_parse::Error> for Error {
+    fn from(err: ucd_parse::Error) -> Error {
+        Error::Other(err.to_string())
     }
 }

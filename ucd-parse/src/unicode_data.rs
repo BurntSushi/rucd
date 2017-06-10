@@ -1,71 +1,13 @@
 use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::fmt;
-use std::fs::File;
-use std::io::{self, BufRead};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use regex::Regex;
 
-use common::Codepoint;
-use error::{Error, error_set_line};
-
-/// A parser for the `UnicodeData.txt` file.
-#[derive(Debug)]
-pub struct UnicodeDataParser<R> {
-    rdr: io::BufReader<R>,
-    line: String,
-    line_number: u64,
-}
-
-impl UnicodeDataParser<File> {
-    /// Create a new parser for UnicodeData from the given path to the
-    /// Unicode data directory.
-    pub fn from_dir<P: AsRef<Path>>(
-        path: P,
-    ) -> Result<UnicodeDataParser<File>, Error> {
-        let path = path.as_ref().join("UnicodeData.txt");
-        let file = File::open(path)?;
-        Ok(UnicodeDataParser::new(file))
-    }
-}
-
-impl<R: io::Read> UnicodeDataParser<R> {
-    /// Create a new parser that parses the reader given.
-    ///
-    /// Note that the reader is buffered internally, so the caller does not
-    /// need to provide their own buffering.
-    pub fn new(rdr: R) -> UnicodeDataParser<R> {
-        UnicodeDataParser {
-            rdr: io::BufReader::new(rdr),
-            line: String::new(),
-            line_number: 1,
-        }
-    }
-
-    /// Parse the next character entry.
-    ///
-    /// If there was a problem parsing the next character entry, then an error
-    /// is returned. If no more entries are available, then `None` is returned.
-    pub fn parse_next<'a>(
-        &'a mut self,
-    ) -> Option<Result<UnicodeData<'a>, Error>> {
-        self.line.clear();
-        let n = match self.rdr.read_line(&mut self.line) {
-            Err(err) => return Some(Err(Error::from(err))),
-            Ok(n) => n,
-        };
-        if n == 0 {
-            return None;
-        }
-        let line_number = self.line_number;
-        self.line_number += 1;
-        Some(UnicodeData::parse_line(&self.line).map_err(|mut err| {
-            error_set_line(&mut err, Some(line_number));
-            err
-        }))
-    }
-}
+use common::{Codepoint, UcdLineDatum};
+use error::Error;
 
 /// Represents a single row in the `UnicodeData.txt` file.
 ///
@@ -123,11 +65,41 @@ pub struct UnicodeData<'a> {
 }
 
 impl<'a> UnicodeData<'a> {
-    /// Parse a single line in the `UnicodeData.txt` file.
-    ///
-    /// Note that this parsing routine is zero allocation (unlike its
-    /// `FromStr` impl).
-    pub fn parse_line(line: &'a str) -> Result<UnicodeData<'a>, Error> {
+    /// The file path to `UnicodeData.txt` based on the directory given.
+    pub fn from_dir<P: AsRef<Path>>(dir: P) -> PathBuf {
+        dir.as_ref().join(Self::file_name())
+    }
+
+    /// The file name in the UCD corresponding to where this datum resides.
+    pub fn file_name() -> &'static OsStr {
+        OsStr::new("UnicodeData.txt")
+    }
+
+    /// Convert this record into an owned value such that it no longer
+    /// borrows from the original line that it was parsed from.
+    pub fn into_owned(self) -> UnicodeData<'static> {
+        UnicodeData {
+            codepoint: self.codepoint,
+            name: Cow::Owned(self.name.into_owned()),
+            general_category: Cow::Owned(self.general_category.into_owned()),
+            canonical_combining_class: self.canonical_combining_class,
+            bidi_class: Cow::Owned(self.bidi_class.into_owned()),
+            decomposition: self.decomposition,
+            numeric_type_decimal: self.numeric_type_decimal,
+            numeric_type_digit: self.numeric_type_digit,
+            numeric_type_numeric: self.numeric_type_numeric,
+            bidi_mirrored: self.bidi_mirrored,
+            unicode1_name: Cow::Owned(self.unicode1_name.into_owned()),
+            iso_comment: Cow::Owned(self.iso_comment.into_owned()),
+            simple_uppercase_mapping: self.simple_uppercase_mapping,
+            simple_lowercase_mapping: self.simple_lowercase_mapping,
+            simple_titlecase_mapping: self.simple_titlecase_mapping,
+        }
+    }
+}
+
+impl<'a> UcdLineDatum<'a> for UnicodeData<'a> {
+    fn parse_line(line: &'a str) -> Result<UnicodeData<'a>, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)
@@ -156,8 +128,8 @@ impl<'a> UnicodeData<'a> {
             None => return err!("invalid UnicodeData line"),
         };
         let capget = |n| caps.get(n).unwrap().as_str();
-
         let mut data = UnicodeData::default();
+
         data.codepoint = capget(1).parse()?;
         data.name = Cow::Borrowed(capget(2));
         data.general_category = Cow::Borrowed(capget(3));
@@ -205,28 +177,6 @@ impl<'a> UnicodeData<'a> {
             data.simple_titlecase_mapping = Some(capget(15).parse()?);
         }
         Ok(data)
-    }
-
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> UnicodeData<'static> {
-        UnicodeData {
-            codepoint: self.codepoint,
-            name: Cow::Owned(self.name.into_owned()),
-            general_category: Cow::Owned(self.general_category.into_owned()),
-            canonical_combining_class: self.canonical_combining_class,
-            bidi_class: Cow::Owned(self.bidi_class.into_owned()),
-            decomposition: self.decomposition,
-            numeric_type_decimal: self.numeric_type_decimal,
-            numeric_type_digit: self.numeric_type_digit,
-            numeric_type_numeric: self.numeric_type_numeric,
-            bidi_mirrored: self.bidi_mirrored,
-            unicode1_name: Cow::Owned(self.unicode1_name.into_owned()),
-            iso_comment: Cow::Owned(self.iso_comment.into_owned()),
-            simple_uppercase_mapping: self.simple_uppercase_mapping,
-            simple_lowercase_mapping: self.simple_lowercase_mapping,
-            simple_titlecase_mapping: self.simple_titlecase_mapping,
-        }
     }
 }
 
@@ -557,8 +507,8 @@ mod tests {
 
     #[test]
     fn parse1() {
-        let line = "249D;PARENTHESIZED LATIN SMALL LETTER B;So;0;L;<compat> 0028 0062 0029;;;;N;;;;;";
-        let data = UnicodeData::parse_line(line).unwrap();
+        let line = "249D;PARENTHESIZED LATIN SMALL LETTER B;So;0;L;<compat> 0028 0062 0029;;;;N;;;;;\n";
+        let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x249d),
             name: Cow::Borrowed("PARENTHESIZED LATIN SMALL LETTER B"),
@@ -583,8 +533,8 @@ mod tests {
 
     #[test]
     fn parse2() {
-        let line = "000D;<control>;Cc;0;B;;;;;N;CARRIAGE RETURN (CR);;;;";
-        let data = UnicodeData::parse_line(line).unwrap();
+        let line = "000D;<control>;Cc;0;B;;;;;N;CARRIAGE RETURN (CR);;;;\n";
+        let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x000D),
             name: Cow::Borrowed("<control>"),
@@ -607,8 +557,8 @@ mod tests {
 
     #[test]
     fn parse3() {
-        let line = "00BC;VULGAR FRACTION ONE QUARTER;No;0;ON;<fraction> 0031 2044 0034;;;1/4;N;FRACTION ONE QUARTER;;;;";
-        let data = UnicodeData::parse_line(line).unwrap();
+        let line = "00BC;VULGAR FRACTION ONE QUARTER;No;0;ON;<fraction> 0031 2044 0034;;;1/4;N;FRACTION ONE QUARTER;;;;\n";
+        let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x00BC),
             name: Cow::Borrowed("VULGAR FRACTION ONE QUARTER"),
@@ -633,8 +583,8 @@ mod tests {
 
     #[test]
     fn parse4() {
-        let line = "0041;LATIN CAPITAL LETTER A;Lu;0;L;;;;;N;;;;0061;";
-        let data = UnicodeData::parse_line(line).unwrap();
+        let line = "0041;LATIN CAPITAL LETTER A;Lu;0;L;;;;;N;;;;0061;\n";
+        let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x0041),
             name: Cow::Borrowed("LATIN CAPITAL LETTER A"),
@@ -657,8 +607,8 @@ mod tests {
 
     #[test]
     fn parse5() {
-        let line = "0F33;TIBETAN DIGIT HALF ZERO;No;0;L;;;;-1/2;N;;;;;";
-        let data = UnicodeData::parse_line(line).unwrap();
+        let line = "0F33;TIBETAN DIGIT HALF ZERO;No;0;L;;;;-1/2;N;;;;;\n";
+        let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x0F33),
             name: Cow::Borrowed("TIBETAN DIGIT HALF ZERO"),

@@ -1,9 +1,11 @@
 [root]
-name = "rucd-generate"
+name = "ucd-generate"
 version = "0.0.1"
 dependencies = [
+ "byteorder 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.24.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "fst 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fst 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "ucd-parse 0.0.1",
 ]
@@ -57,22 +59,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "fs2"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fst"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "byteorder 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "memmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -100,17 +91,6 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "memmap"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "fs2 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -221,13 +201,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum bitflags 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1370e9fc2a6ae53aea8b7a5110edbd08836ed87c88736dfabccade1c2b44bff4"
 "checksum byteorder 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c40977b0ee6b9885c9013cd41d9feffdd22deb3bb4dc3a71d901cc7a77de18c8"
 "checksum clap 2.24.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6b8f69e518f967224e628896b54e41ff6acfb4dcfefc5076325c36525dac900f"
-"checksum fs2 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "bcd414e5a1a979b931bb92f41b7a54106d3f6d2e6c253e9ce943b7cd468251ef"
-"checksum fst 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "724680dd4ee7fa0e63bea865b913464c652b595d4ac3b6de88fc7831e00e652b"
+"checksum fst 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "11e21bdd626be09f2bd66b44dbb724538176aa3549f3109208db35538dd2699f"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3b37545ab726dd833ec6420aaba8231c5b320814b9029ad585555d2a03e94fbf"
 "checksum libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)" = "e7eb6b826bfc1fdea7935d46556250d1799b7fe2d9f7951071f4291710665e3e"
 "checksum memchr 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1dbccc0e46f1ea47b9f17e6d67c5a96bd27030519c519c9c91327e31275a47b4"
-"checksum memmap 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "69253224aa10070855ea8fe9dbe94a03fc2b1d7930bb340c9e586a7513716fea"
 "checksum regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1731164734096285ec2a5ec7fea5248ae2f5485b3feeb0115af4fda2183b2d1b"
 "checksum regex-syntax 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ad890a5eef7953f55427c50575c680c42841653abd2b028b68cd223d157f62db"
 "checksum strsim 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b4d15c810519a91cf877e7e36e63fe068815c678181439f2f29e2562147c3694"
