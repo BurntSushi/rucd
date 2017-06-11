@@ -4,6 +4,7 @@ use std::char;
 use std::fmt;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::marker::PhantomData;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -21,23 +22,24 @@ pub trait UcdLineDatum<'a>: Default {
 /// The `R` type parameter refers to the underlying `io::Read` implementation
 /// from which the UCD data is read.
 #[derive(Debug)]
-pub struct UcdLineParser<R> {
+pub struct UcdLineParser<R, D> {
     rdr: io::BufReader<R>,
     line: String,
     line_number: u64,
+    _data: PhantomData<D>,
 }
 
-impl UcdLineParser<File> {
+impl<D> UcdLineParser<File, D> {
     /// Create a new parser from the given file path.
     pub fn from_path<P: AsRef<Path>>(
         path: P,
-    ) -> Result<UcdLineParser<File>, Error> {
+    ) -> Result<UcdLineParser<File, D>, Error> {
         let file = File::open(path)?;
         Ok(UcdLineParser::new(file))
     }
 }
 
-impl<R: io::Read> UcdLineParser<R> {
+impl<R: io::Read, D> UcdLineParser<R, D> {
     /// Create a new parser that parses the reader given.
     ///
     /// The type of data parsed is determined when the `parse_next` function
@@ -45,21 +47,20 @@ impl<R: io::Read> UcdLineParser<R> {
     ///
     /// Note that the reader is buffered internally, so the caller does not
     /// need to provide their own buffering.
-    pub fn new(rdr: R) -> UcdLineParser<R> {
+    pub fn new(rdr: R) -> UcdLineParser<R, D> {
         UcdLineParser {
             rdr: io::BufReader::new(rdr),
             line: String::new(),
             line_number: 0,
+            _data: PhantomData,
         }
     }
+}
 
-    /// Parse the next line in this file.
-    ///
-    /// If there was a problem parsing the next character entry, then an error
-    /// is returned. If no more entries are available, then `None` is returned.
-    pub fn parse_next<'a, D: UcdLineDatum<'a>>(
-        &'a mut self,
-    ) -> Option<Result<D, Error>> {
+impl<R: io::Read, D: FromStr<Err=Error>> Iterator for UcdLineParser<R, D> {
+    type Item = Result<D, Error>;
+
+    fn next(&mut self) -> Option<Result<D, Error>> {
         loop {
             self.line_number += 1;
             self.line.clear();
@@ -75,7 +76,7 @@ impl<R: io::Read> UcdLineParser<R> {
             }
         }
         let line_number = self.line_number;
-        Some(D::parse_line(&self.line).map_err(|mut err| {
+        Some(self.line.parse().map_err(|mut err| {
             error_set_line(&mut err, Some(line_number));
             err
         }))

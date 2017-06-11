@@ -37,10 +37,9 @@ fn parse_jamo_short_name<P: AsRef<Path>>(
     ucd_dir: P,
 ) -> Result<BTreeMap<Codepoint, String>> {
     let path = JamoShortName::from_dir(ucd_dir);
-    let mut parser = UcdLineParser::from_path(path)?;
-
+    let parser = UcdLineParser::from_path(path)?;
     let mut map = BTreeMap::new();
-    while let Some(result) = parser.parse_next() {
+    for result in parser {
         let x: JamoShortName = result?;
         map.insert(x.codepoint, x.name.into_owned());
     }

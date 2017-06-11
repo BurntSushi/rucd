@@ -58,8 +58,6 @@ impl<'a> UcdLineDatum<'a> for JamoShortName<'a> {
             Some(caps) => caps,
             None => return err!("invalid Jamo_Short_name line"),
         };
-        // datum.codepoint = caps["codepoint"].parse()?;
-        // datum.name = Cow::Borrowed(caps.name("name").unwrap().as_str());
         Ok(JamoShortName {
             codepoint: caps["codepoint"].parse()?,
             name: Cow::Borrowed(caps.name("name").unwrap().as_str()),

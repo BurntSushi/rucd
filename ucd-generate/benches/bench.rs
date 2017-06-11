@@ -18,6 +18,34 @@ fn codepoint_key(cp: u32) -> [u8; 4] {
 }
 
 #[bench]
+fn names_slice(b: &mut Bencher) {
+    let slice = tables::names_slice::NAMES;
+    let mut i = 0;
+    b.iter(|| {
+        let (name, cp) = slice[i];
+        i = (i + 1) % slice.len();
+
+        let found = slice[slice.binary_search_by_key(&name, |x| x.0).unwrap()];
+        assert_eq!(found.1, cp);
+    });
+}
+
+#[bench]
+fn names_fst(b: &mut Bencher) {
+    let slice = tables::names_slice::NAMES;
+    let fst = &tables::names_fst::NAMES;
+
+    let mut i = 0;
+    b.iter(|| {
+        let (name, cp) = slice[i];
+        i = (i + 1) % slice.len();
+
+        let found = fst.get(name).unwrap() as u32;
+        assert_eq!(found, cp);
+    });
+}
+
+#[bench]
 fn jamo_short_name_fst(b: &mut Bencher) {
     let slice = tables::jamo_short_name_slice::JAMO_SHORT_NAME;
     let fst = &tables::jamo_short_name_fst::JAMO_SHORT_NAME;

@@ -20,6 +20,7 @@ clap = "2"
 fst = { version = "0.2", default-features = false }
 regex = "0.2"
 ucd-parse = { version = "0.0.1", path = "../ucd-parse" }
+ucd-util = { version = "0.0.1", path = "../ucd-util"  }
 
 [dev-dependencies]
 lazy_static = "0.2"

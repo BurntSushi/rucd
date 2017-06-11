@@ -11,8 +11,8 @@ extern crate regex;
 pub use common::{Codepoint, UcdLineDatum, UcdLineParser};
 pub use error::{Error, ErrorKind};
 
-// pub use jamo_short_name::{JamoShortNameParser, JamoShortName};
-pub use jamo_short_name::{JamoShortName};
+pub use jamo_short_name::JamoShortName;
+pub use name_aliases::{NameAlias, NameAliasLabel};
 pub use unicode_data::{
     UnicodeData, UnicodeDataNumeric,
     UnicodeDataDecomposition, UnicodeDataDecompositionTag,
@@ -28,4 +28,5 @@ mod common;
 mod error;
 
 mod jamo_short_name;
+mod name_aliases;
 mod unicode_data;
