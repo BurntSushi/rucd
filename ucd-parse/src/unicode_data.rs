@@ -1,12 +1,11 @@
 use std::borrow::Cow;
-use std::ffi::OsStr;
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 
 use regex::Regex;
 
-use common::{Codepoint, UcdLineDatum};
+use common::{UcdFile, UcdFileByCodepoint, Codepoint};
 use error::Error;
 
 /// Represents a single row in the `UnicodeData.txt` file.
@@ -64,17 +63,19 @@ pub struct UnicodeData<'a> {
     pub simple_titlecase_mapping: Option<Codepoint>,
 }
 
+impl UcdFile for UnicodeData<'static> {
+    fn relative_file_path() -> &'static Path {
+        Path::new("UnicodeData.txt")
+    }
+}
+
+impl UcdFileByCodepoint for UnicodeData<'static> {
+    fn codepoint(&self) -> Codepoint {
+        self.codepoint
+    }
+}
+
 impl<'a> UnicodeData<'a> {
-    /// The file path to `UnicodeData.txt` based on the directory given.
-    pub fn from_dir<P: AsRef<Path>>(dir: P) -> PathBuf {
-        dir.as_ref().join(Self::file_name())
-    }
-
-    /// The file name in the UCD corresponding to where this datum resides.
-    pub fn file_name() -> &'static OsStr {
-        OsStr::new("UnicodeData.txt")
-    }
-
     /// Convert this record into an owned value such that it no longer
     /// borrows from the original line that it was parsed from.
     pub fn into_owned(self) -> UnicodeData<'static> {
@@ -96,10 +97,9 @@ impl<'a> UnicodeData<'a> {
             simple_titlecase_mapping: self.simple_titlecase_mapping,
         }
     }
-}
 
-impl<'a> UcdLineDatum<'a> for UnicodeData<'a> {
-    fn parse_line(line: &'a str) -> Result<UnicodeData<'a>, Error> {
+    /// Parse a single line.
+    pub fn parse_line(line: &'a str) -> Result<UnicodeData<'a>, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)

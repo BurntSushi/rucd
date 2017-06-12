@@ -8,7 +8,10 @@ A library for parsing the Unicode character database.
 extern crate lazy_static;
 extern crate regex;
 
-pub use common::{Codepoint, UcdLineDatum, UcdLineParser};
+pub use common::{
+    UcdFile, Codepoint, UcdLineParser,
+    parse_by_codepoint, parse_many_by_codepoint,
+};
 pub use error::{Error, ErrorKind};
 
 pub use jamo_short_name::JamoShortName;

@@ -1,11 +1,10 @@
 use std::borrow::Cow;
-use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 
 use regex::Regex;
 
-use common::{Codepoint, UcdLineDatum};
+use common::{UcdFile, UcdFileByCodepoint, Codepoint};
 use error::Error;
 
 /// A single row in the `Jamo.txt` file.
@@ -20,17 +19,19 @@ pub struct JamoShortName<'a> {
     pub name: Cow<'a, str>,
 }
 
+impl UcdFile for JamoShortName<'static> {
+    fn relative_file_path() -> &'static Path {
+        Path::new("Jamo.txt")
+    }
+}
+
+impl UcdFileByCodepoint for JamoShortName<'static> {
+    fn codepoint(&self) -> Codepoint {
+        self.codepoint
+    }
+}
+
 impl<'a> JamoShortName<'a> {
-    /// The file path to `Jamo.txt` based on the directory given.
-    pub fn from_dir<P: AsRef<Path>>(dir: P) -> PathBuf {
-        dir.as_ref().join(Self::file_name())
-    }
-
-    /// The file name in the UCD corresponding to where this datum resides.
-    pub fn file_name() -> &'static OsStr {
-        OsStr::new("Jamo.txt")
-    }
-
     /// Convert this record into an owned value such that it no longer
     /// borrows from the original line that it was parsed from.
     pub fn into_owned(self) -> JamoShortName<'static> {
@@ -39,10 +40,9 @@ impl<'a> JamoShortName<'a> {
             name: Cow::Owned(self.name.into_owned()),
         }
     }
-}
 
-impl<'a> UcdLineDatum<'a> for JamoShortName<'a> {
-    fn parse_line(line: &'a str) -> Result<JamoShortName<'a>, Error> {
+    /// Parse a single line.
+    pub fn parse_line(line: &'a str) -> Result<JamoShortName<'a>, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)

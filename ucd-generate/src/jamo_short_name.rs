@@ -1,9 +1,7 @@
-use std::collections::BTreeMap;
 use std::io;
-use std::path::Path;
 
 use fst::{Map, MapBuilder};
-use ucd_parse::{UcdLineParser, Codepoint, JamoShortName};
+use ucd_parse::{self, JamoShortName};
 
 use args::ArgMatches;
 use error::Result;
@@ -11,39 +9,25 @@ use util;
 
 pub fn command(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
-    let jamo_map = parse_jamo_short_name(dir)?;
+    let jamo_map = ucd_parse::parse_by_codepoint::<_, JamoShortName>(dir)?;
 
     if !args.wants_fst() {
         let mut table = vec![];
-        for (cp, name) in jamo_map {
-            table.push((cp.value(), name));
+        for (cp, jamo) in jamo_map {
+            table.push((cp.value() as u64, jamo.name.into_owned()));
         }
-        util::write_slice_u32_to_string(io::stdout(), args.name(), &table)?;
+        util::write_slice_u64_to_string(io::stdout(), args.name(), &table)?;
     } else {
         let mut builder = MapBuilder::memory();
-        for (cp, name) in jamo_map {
+        for (cp, jamo) in jamo_map {
             let key = util::codepoint_key(cp);
-            let value = jamo_name_to_u64(&name);
+            let value = jamo_name_to_u64(&jamo.name);
             builder.insert(key, value)?;
         }
         let fst = Map::from_bytes(builder.into_inner()?)?;
         args.write_fst_map(io::stdout(), args.name(), fst.as_fst())?;
     }
     Ok(())
-}
-
-/// Parse the contents of the Jamo.txt file.
-fn parse_jamo_short_name<P: AsRef<Path>>(
-    ucd_dir: P,
-) -> Result<BTreeMap<Codepoint, String>> {
-    let path = JamoShortName::from_dir(ucd_dir);
-    let parser = UcdLineParser::from_path(path)?;
-    let mut map = BTreeMap::new();
-    for result in parser {
-        let x: JamoShortName = result?;
-        map.insert(x.codepoint, x.name.into_owned());
-    }
-    Ok(map)
 }
 
 /// Store a Jamo property value in the least significant bytes of a u64.

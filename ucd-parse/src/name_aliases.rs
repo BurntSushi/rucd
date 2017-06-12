@@ -1,11 +1,10 @@
 use std::borrow::Cow;
-use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 
 use regex::Regex;
 
-use common::{UcdLineDatum, Codepoint};
+use common::{UcdFile, UcdFileByCodepoint, Codepoint};
 use error::Error;
 
 /// A single row in the `NameAliases.txt` file.
@@ -22,17 +21,19 @@ pub struct NameAlias<'a> {
     pub label: NameAliasLabel,
 }
 
+impl UcdFile for NameAlias<'static> {
+    fn relative_file_path() -> &'static Path {
+        Path::new("NameAliases.txt")
+    }
+}
+
+impl UcdFileByCodepoint for NameAlias<'static> {
+    fn codepoint(&self) -> Codepoint {
+        self.codepoint
+    }
+}
+
 impl<'a> NameAlias<'a> {
-    /// The file path to `NameAliases.txt` based on the directory given.
-    pub fn from_dir<P: AsRef<Path>>(dir: P) -> PathBuf {
-        dir.as_ref().join(Self::file_name())
-    }
-
-    /// The file name in the UCD corresponding to where this datum resides.
-    pub fn file_name() -> &'static OsStr {
-        OsStr::new("NameAliases.txt")
-    }
-
     /// Convert this record into an owned value such that it no longer
     /// borrows from the original line that it was parsed from.
     pub fn into_owned(self) -> NameAlias<'static> {
@@ -42,10 +43,9 @@ impl<'a> NameAlias<'a> {
             label: self.label,
         }
     }
-}
 
-impl<'a> UcdLineDatum<'a> for NameAlias<'a> {
-    fn parse_line(line: &'a str) -> Result<NameAlias<'a>, Error> {
+    /// Parse a single line.
+    pub fn parse_line(line: &'a str) -> Result<NameAlias<'a>, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)

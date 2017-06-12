@@ -8,7 +8,7 @@ extern crate ucd_util;
 use std::io::{self, Write};
 use std::process;
 
-use ucd_parse::{UcdLineParser, UnicodeData};
+use ucd_parse::{UcdFile, UnicodeData};
 
 use args::ArgMatches;
 use error::Result;
@@ -67,9 +67,8 @@ fn run() -> Result<()> {
 
 fn cmd_test_unicode_data(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
-    let parser = UcdLineParser::from_path(UnicodeData::from_dir(dir))?;
     let mut stdout = io::stdout();
-    for result in parser {
+    for result in UnicodeData::from_dir(dir)? {
         let x: UnicodeData = result?;
         writeln!(stdout, "{}", x)?;
     }

@@ -14,9 +14,14 @@ keywords = ["unicode", "database", "character", "search", "fst"]
 license = "Unlicense/MIT"
 
 [dependencies]
+byteorder = "1"
 clap = "2"
-fst = "0.2"
+fst = { version = "0.2", default-features = false }
+lazy_static = "0.2"
 regex = "0.2"
+tabwriter = "1"
+ucd-util = { version = "0.0.1", path = "ucd-util" }
+unicode-width = "*"
 
 [profile.release]
 debug = true

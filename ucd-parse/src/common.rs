@@ -1,20 +1,80 @@
 // This module defines various common things used throughout the UCD.
 
 use std::char;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::marker::PhantomData;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use error::{Error, error_set_line};
 
-/// A simple interface for parsing a single datum from a single line in a
-/// UCD file.
-pub trait UcdLineDatum<'a>: Default {
-    /// Parse a single line in a UCD file into a single datum.
-    fn parse_line(line: &'a str) -> Result<Self, Error>;
+/// Parse a particular file in the UCD into a map from codepoint to the record.
+///
+/// The given directory should be the directory to the UCD.
+pub fn parse_by_codepoint<P, D>(
+    ucd_dir: P,
+) -> Result<BTreeMap<Codepoint, D>, Error>
+where P: AsRef<Path>, D: UcdFileByCodepoint
+{
+    let mut map = BTreeMap::new();
+    for result in D::from_dir(ucd_dir)? {
+        let x = result?;
+        map.insert(x.codepoint(), x);
+    }
+    Ok(map)
+}
+
+/// Parse a particular file in the UCD into a map from codepoint to all
+/// records associated with that codepoint.
+///
+/// This is useful for files that have multiple records for each codepoint.
+/// For example, the `NameAliases.txt` file lists multiple aliases for some
+/// codepoints.
+///
+/// The given directory should be the directory to the UCD.
+pub fn parse_many_by_codepoint<P, D>(
+    ucd_dir: P,
+) -> Result<BTreeMap<Codepoint, Vec<D>>, Error>
+where P: AsRef<Path>, D: UcdFileByCodepoint
+{
+    let mut map = BTreeMap::new();
+    for result in D::from_dir(ucd_dir)? {
+        let x = result?;
+        map.entry(x.codepoint()).or_insert(vec![]).push(x);
+    }
+    Ok(map)
+}
+
+/// A trait that describes a single UCD file.
+pub trait UcdFile: fmt::Debug + Default + Eq + FromStr<Err=Error> + PartialEq {
+    /// The file path corresponding to this file, relative to the UCD
+    /// directory.
+    fn relative_file_path() -> &'static Path;
+
+    /// The full file path corresponding to this file given the UCD directory
+    /// path.
+    fn file_path<P: AsRef<Path>>(ucd_dir: P) -> PathBuf {
+        ucd_dir.as_ref().join(Self::relative_file_path())
+    }
+
+    /// Create an iterator over each record in this UCD file.
+    ///
+    /// The parameter should correspond to the directory containing the UCD.
+    fn from_dir<P: AsRef<Path>>(
+        ucd_dir: P,
+    ) -> Result<UcdLineParser<File, Self>, Error> {
+        UcdLineParser::from_path(Self::file_path(ucd_dir))
+    }
+}
+
+/// A trait that describes a single UCD file where every record in the file
+/// has a single codepoint associated with it.
+pub trait UcdFileByCodepoint: UcdFile {
+    /// Returns the codepoint associated with this record.
+    fn codepoint(&self) -> Codepoint;
 }
 
 /// A line oriented parser for a particular UCD file.

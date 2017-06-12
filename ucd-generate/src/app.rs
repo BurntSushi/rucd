@@ -119,6 +119,15 @@ pub fn app() -> App<'static, 'static> {
             .long("no-hangul")
             .help("Do not include algorithmically generated Hangul syllable \
                    names."))
+        .arg(Arg::with_name("tagged")
+             .long("tagged")
+             .help("Tag each codepoint with how the name was derived. \
+                    The lower 32 bits corresponds to the codepoint. Bit 33 \
+                    indicates the name was explicitly provided in \
+                    UnicodeData.txt. Bit 34 indicates the name is from \
+                    NameAliases.txt. \
+                    Bit 35 indicates the name is a Hangul syllable. Bit 36 \
+                    indicates the name is an ideograph."))
         .arg(Arg::with_name("normalize")
             .long("normalize")
             .help("Normalize all character names according to UAX44-LM2."));
