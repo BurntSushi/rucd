@@ -34,6 +34,11 @@ permits fast searching while simultaneously compressing the table.
 
 Project home page: https://github.com/BurntSushi/rucd";
 
+const ABOUT_GENERAL_CATEGORY: &'static str = "\
+general-category produces one table of Unicode codepoint ranges for each
+possible General_Category value.
+";
+
 const ABOUT_JAMO_SHORT_NAME: &'static str = "\
 jamo-short-name parses the UCD's Jamo.txt file and emits its contents as a
 slice table. The slice consists of a sorted sequences of pairs, where each
@@ -86,6 +91,17 @@ pub fn app() -> App<'static, 'static> {
         .help("Directory containing the Unicode character database files.");
 
     // Subcommands.
+    let cmd_general_category = SubCommand::with_name("general-category")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create the General_Category property tables.")
+        .before_help(ABOUT_GENERAL_CATEGORY)
+        .arg(ucd_dir.clone())
+        .arg(flag_rust_slice.clone())
+        .arg(flag_rust_fst.clone())
+        .arg(flag_raw_fst.clone())
+        .arg(flag_name("GENERAL_CATEGORY"));
     let cmd_jamo_short_name = SubCommand::with_name("jamo-short-name")
         .author(crate_authors!())
         .version(crate_version!())
@@ -148,6 +164,7 @@ pub fn app() -> App<'static, 'static> {
         .template(TEMPLATE)
         .max_term_width(100)
         .setting(AppSettings::UnifiedHelpMessage)
+        .subcommand(cmd_general_category)
         .subcommand(cmd_jamo_short_name)
         .subcommand(cmd_names)
         .subcommand(cmd_test_unicode_data)

@@ -31,6 +31,7 @@ mod args;
 mod error;
 mod util;
 
+mod general_category;
 mod jamo_short_name;
 mod names;
 
