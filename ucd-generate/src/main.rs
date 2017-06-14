@@ -48,6 +48,9 @@ fn main() {
 fn run() -> Result<()> {
     let matches = app::app().get_matches();
     match matches.subcommand() {
+        ("general-category", Some(m)) => {
+            general_category::command(ArgMatches::new(m))
+        }
         ("jamo-short-name", Some(m)) => {
             jamo_short_name::command(ArgMatches::new(m))
         }

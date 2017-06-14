@@ -11,6 +11,22 @@ use std::str::FromStr;
 
 use error::{Error, error_set_line};
 
+/// Parse a particular file in the UCD into a sequence of rows.
+///
+/// The given directory should be the directory to the UCD.
+pub fn parse<P, D>(
+    ucd_dir: P,
+) -> Result<Vec<D>, Error>
+where P: AsRef<Path>, D: UcdFile
+{
+    let mut xs = vec![];
+    for result in D::from_dir(ucd_dir)? {
+        let x = result?;
+        xs.push(x);
+    }
+    Ok(xs)
+}
+
 /// Parse a particular file in the UCD into a map from codepoint to the record.
 ///
 /// The given directory should be the directory to the UCD.

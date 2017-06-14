@@ -10,7 +10,7 @@ extern crate regex;
 
 pub use common::{
     UcdFile, Codepoint, UcdLineParser,
-    parse_by_codepoint, parse_many_by_codepoint,
+    parse, parse_by_codepoint, parse_many_by_codepoint,
 };
 pub use error::{Error, ErrorKind};
 
@@ -19,6 +19,7 @@ pub use name_aliases::{NameAlias, NameAliasLabel};
 pub use unicode_data::{
     UnicodeData, UnicodeDataNumeric,
     UnicodeDataDecomposition, UnicodeDataDecompositionTag,
+    UnicodeDataExpander,
 };
 
 macro_rules! err {

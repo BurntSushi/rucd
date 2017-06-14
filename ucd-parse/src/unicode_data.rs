@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
+use std::iter;
+use std::ops::Range;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -177,6 +179,22 @@ impl<'a> UnicodeData<'a> {
             data.simple_titlecase_mapping = Some(capget(15).parse()?);
         }
         Ok(data)
+    }
+
+    /// Returns true if and only if this record corresponds to the start of a
+    /// range.
+    pub fn is_range_start(&self) -> bool {
+        self.name.starts_with('<')
+        && self.name.ends_with('>')
+        && self.name.contains("First")
+    }
+
+    /// Returns true if and only if this record corresponds to the end of a
+    /// range.
+    pub fn is_range_end(&self) -> bool {
+        self.name.starts_with('<')
+        && self.name.ends_with('>')
+        && self.name.contains("Last")
     }
 }
 
@@ -490,6 +508,97 @@ impl fmt::Display for UnicodeDataNumeric {
     }
 }
 
+/// An iterator adapter that expands rows in `UnicodeData.txt`.
+///
+/// Throughout `UnicodeData.txt`, some assigned codepoints are not explicitly
+/// represented. Instead, they are represented by a pair of rows, indicating
+/// a range of codepoints with the same properties. For example, the Hangul
+/// syllable codepoints are represented by these two rows:
+///
+/// ```ignore
+/// AC00;<Hangul Syllable, First>;Lo;0;L;;;;;N;;;;;
+/// D7A3;<Hangul Syllable, Last>;Lo;0;L;;;;;N;;;;;
+/// ```
+///
+/// This iterator will wrap any iterator of `UnicodeData` and, when a range of
+/// Unicode codepoints is found, it will be expanded to the appropriate
+/// sequence of `UnicodeData` values. Note that all such expanded records will
+/// have an empty name.
+pub struct UnicodeDataExpander<I: Iterator> {
+    /// The underlying iterator.
+    it: iter::Peekable<I>,
+    /// A range of codepoints to emit when we've found a pair. Otherwise,
+    /// `None`.
+    range: CodepointRange,
+}
+
+struct CodepointRange {
+    /// The codepoint range.
+    range: Range<u32>,
+    /// The start record. All subsequent records in this range are generated
+    /// by cloning this and updating the codepoint/name.
+    start_record: UnicodeData<'static>,
+}
+
+impl<I: Iterator<Item=UnicodeData<'static>>> UnicodeDataExpander<I> {
+    /// Create a new iterator that expands pairs of `UnicodeData` range
+    /// records. All other records are passed through as-is.
+    pub fn new<T>(it: T) -> UnicodeDataExpander<I>
+            where T: IntoIterator<IntoIter=I, Item=I::Item>
+    {
+        UnicodeDataExpander {
+            it: it.into_iter().peekable(),
+            range: CodepointRange {
+                range: 0..0,
+                start_record: UnicodeData::default(),
+            },
+        }
+    }
+}
+
+impl<I: Iterator<Item=UnicodeData<'static>>>
+    Iterator for UnicodeDataExpander<I>
+{
+    type Item = UnicodeData<'static>;
+
+    fn next(&mut self) -> Option<UnicodeData<'static>> {
+        if let Some(udata) = self.range.next() {
+            return Some(udata);
+        }
+        let row1 = match self.it.next() {
+            None => return None,
+            Some(row1) => row1,
+        };
+        if !row1.is_range_start()
+            || !self.it.peek().map_or(false, |row2| row2.is_range_end())
+        {
+            return Some(row1)
+        }
+        let row2 = self.it.next().unwrap();
+        self.range = CodepointRange {
+            range: row1.codepoint.value()..(row2.codepoint.value() + 1),
+            start_record: row1,
+        };
+        self.next()
+    }
+}
+
+impl Iterator for CodepointRange {
+    type Item = UnicodeData<'static>;
+
+    fn next(&mut self) -> Option<UnicodeData<'static>> {
+        let cp = match self.range.next() {
+            None => return None,
+            Some(cp) => cp,
+        };
+        Some(UnicodeData {
+            codepoint: Codepoint::from_u32(cp).unwrap(),
+            name: Cow::Borrowed(""),
+            ..self.start_record.clone()
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -627,5 +736,22 @@ mod tests {
             simple_lowercase_mapping: None,
             simple_titlecase_mapping: None,
         });
+    }
+
+    #[test]
+    fn expander() {
+        use common::UcdLineParser;
+        use super::UnicodeDataExpander;
+
+        let data = "\
+ABF9;MEETEI MAYEK DIGIT NINE;Nd;0;L;;9;9;9;N;;;;;
+AC00;<Hangul Syllable, First>;Lo;0;L;;;;;N;;;;;
+D7A3;<Hangul Syllable, Last>;Lo;0;L;;;;;N;;;;;
+D7B0;HANGUL JUNGSEONG O-YEO;Lo;0;L;;;;;N;;;;;
+";
+        let records = UcdLineParser::new(data.as_bytes())
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(UnicodeDataExpander::new(records).count(), 11174);
     }
 }
