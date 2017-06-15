@@ -1,27 +1,51 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::io::{self, Write};
+
 use ucd_parse::{self, UnicodeDataExpander};
 
 use args::ArgMatches;
 use error::Result;
-use util::{PropertyNames, PropertyValues};
+use util::{self, PropertyValues};
 
 pub fn command(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
-    let props = PropertyNames::from_ucd_dir(&dir)?;
     let propvals = PropertyValues::from_ucd_dir(&dir)?;
     let unexpanded = ucd_parse::parse(&dir)?;
     let rows: Vec<_> = UnicodeDataExpander::new(unexpanded).collect();
-    println!("{:#?}", props);
-    println!("{:#?}", propvals);
-    println!("{:?}", rows.len());
-    println!("{:?}", propvals.canonical("g EnErALCATE go rY", "UNASSIGNED"));
+
+    let mut bycat: BTreeMap<String, BTreeSet<u32>> = BTreeMap::new();
+    let mut assigned = BTreeSet::new();
+    for row in rows {
+        assigned.insert(row.codepoint.value());
+        let gc = propvals
+            .canonical("gc", &row.general_category)?
+            .to_string();
+        bycat.entry(gc)
+            .or_insert(BTreeSet::new())
+            .insert(row.codepoint.value());
+    }
+
+    let unassigned_name = propvals
+        .canonical("gc", "unassigned")?
+        .to_string();
+    bycat.insert(unassigned_name.clone(), BTreeSet::new());
+    for cp in 0..(0x10FFFF + 1) {
+        if !assigned.contains(&cp) {
+            bycat.get_mut(&unassigned_name).unwrap().insert(cp);
+        }
+    }
+
+    let mut wtr = io::BufWriter::new(io::stdout());
+    for (name, set) in bycat {
+        let name = util::rust_const_name(&name);
+        util::write_slice_btree_u32(&mut wtr, &name, &set)?;
+        write!(wtr, "\n\n")?;
+    }
     // BREADCRUMBS:
     //
-    // `rows` should contain every codepoint sans unassigned codepoints.
-    // Group these into general categories, and then write out a set of
-    // codepoints for each category. We should use the "long form" general
-    // category value names. Use ucd_util::symbolic_name_normalize.
-    //
-    // Don't forget to write out the smattering of special purpose categories
-    // which correspond to a union of other categories.
+    // 1. Codepoints should be written as ranges. Derp.
+    // 2. Add FST output format.
+    // 3. Add trie output format.
+    // 4. Make this more configurable?
     Ok(())
 }

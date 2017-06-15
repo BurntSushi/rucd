@@ -1,8 +1,9 @@
 use std::ascii;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
-use std::io;
+use std::io::{self, Write};
 use std::path::Path;
+use std::str;
 
 use byteorder::{ByteOrder, BigEndian as BE};
 use fst::raw::Fst;
@@ -81,6 +82,26 @@ fn write_fst_bytes<W: io::Write>(
     Ok(())
 }
 
+pub fn write_slice_btree_u32<W: io::Write>(
+    mut wtr: W,
+    name: &str,
+    table: &BTreeSet<u32>,
+) -> Result<()> {
+    write_header(&mut wtr)?;
+    writeln!(wtr, "pub const {}: &'static [u32] = &[", name)?;
+
+    {
+        let mut linewtr = LineWriter::new(&mut wtr);
+        for &cp in table {
+            linewtr.write_str(format!("{}, ", cp))?;
+        }
+        linewtr.flush()?;
+    }
+
+    writeln!(wtr, "];")?;
+    Ok(())
+}
+
 pub fn write_slice_u64_to_string<W: io::Write>(
     mut wtr: W,
     name: &str,
@@ -89,18 +110,12 @@ pub fn write_slice_u64_to_string<W: io::Write>(
     write_header(&mut wtr)?;
     writeln!(wtr, "pub const {}: &'static [(u32, &'static str)] = &[", name)?;
 
-    let mut line = "  ".to_string();
-    for &(cp, ref s) in table {
-        let next = format!("({}, {:?}), ", cp, s);
-        if !line.trim().is_empty() && line.len() + next.len() > 79 {
-            writeln!(wtr, "{}", line.trim_right())?;
-            line.clear();
-            line.push_str("  ");
+    {
+        let mut linewtr = LineWriter::new(&mut wtr);
+        for &(cp, ref s) in table {
+            linewtr.write_str(format!("({}, {:?}), ", cp, s))?;
         }
-        line.push_str(&next);
-    }
-    if !line.is_empty() {
-        writeln!(wtr, "{}", line.trim_right())?;
+        linewtr.flush()?;
     }
 
     writeln!(wtr, "];")?;
@@ -115,22 +130,70 @@ pub fn write_slice_string_to_u64<W: io::Write>(
     write_header(&mut wtr)?;
     writeln!(wtr, "pub const {}: &'static [(&'static str, u32)] = &[", name)?;
 
-    let mut line = "  ".to_string();
-    for &(ref s, cp) in table {
-        let next = format!("({:?}, {}), ", s, cp);
-        if !line.trim().is_empty() && line.len() + next.len() > 79 {
-            writeln!(wtr, "{}", line.trim_right())?;
-            line.clear();
-            line.push_str("  ");
+    {
+        let mut linewtr = LineWriter::new(&mut wtr);
+        for &(ref s, cp) in table {
+            linewtr.write_str(format!("({:?}, {}), ", s, cp))?;
         }
-        line.push_str(&next);
-    }
-    if !line.is_empty() {
-        writeln!(wtr, "{}", line.trim_right())?;
+        linewtr.flush()?;
     }
 
     writeln!(wtr, "];")?;
     Ok(())
+}
+
+struct LineWriter<W> {
+    wtr: W,
+    line: String,
+    indent: String,
+    columns: usize,
+}
+
+impl<W: io::Write> LineWriter<W> {
+    fn new(wtr: W) -> LineWriter<W> {
+        let indent = "  ".to_string();
+        LineWriter {
+            wtr: wtr,
+            line: indent.clone(),
+            indent: indent,
+            columns: 79,
+        }
+    }
+
+    fn write_str(&mut self, s: String) -> io::Result<()> {
+        self.write_all(s.as_bytes())
+    }
+
+    fn flush_inner(&mut self) -> io::Result<()> {
+        self.wtr.write_all(self.line.trim_right().as_bytes())?;
+        self.wtr.write_all(b"\n")?;
+        self.line.clear();
+        self.line.push_str(&self.indent);
+        Ok(())
+    }
+}
+
+impl<W: io::Write> io::Write for LineWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let buf = match str::from_utf8(buf) {
+            Ok(buf) => buf,
+            Err(err) => return Err(io::Error::new(io::ErrorKind::Other, err)),
+        };
+        if !self.line.trim().is_empty()
+            && self.line.len() + buf.len() > self.columns
+        {
+            self.flush_inner()?;
+        }
+        self.line.push_str(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        if !self.line.is_empty() {
+            self.flush_inner()?;
+        }
+        self.wtr.flush()
+    }
 }
 
 /// A map from property name (including aliases) to a "canonical" or "long"
@@ -163,11 +226,14 @@ impl PropertyNames {
     }
 
     /// Return the "canonical" or "long" property name for the given property
-    /// name. If no such property exists, return `None`.
-    pub fn canonical<'a>(&'a self, key: &str) -> Option<&'a str> {
+    /// name. If no such property exists, return an error.
+    pub fn canonical<'a>(&'a self, key: &str) -> Result<&'a str> {
         let mut key = key.to_string();
         ucd_util::symbolic_name_normalize(&mut key);
-        self.0.get(&key).map(|v| &**v)
+        match self.0.get(&key).map(|v| &**v) {
+            Some(v) => Ok(v),
+            None => err!("unrecognized property: {:?}", key),
+        }
     }
 }
 
@@ -189,12 +255,7 @@ impl PropertyValues {
         let mut outer_map = BTreeMap::new();
         for result in PropertyValueAlias::from_dir(ucd_dir)? {
             let a = result?;
-            let prop = match props.canonical(&a.property) {
-                Some(name) => name.to_string(),
-                None => return err!(
-                    "unrecognized property name in PropertyValues.txt: {}",
-                    a.property),
-            };
+            let prop = props.canonical(&a.property)?.to_string();
             let canon = a.long.to_string();
             let make_key = |mut value| {
                 ucd_util::symbolic_name_normalize(&mut value);
@@ -216,7 +277,7 @@ impl PropertyValues {
 
     /// Return the "canonical" or "long" property value for the given property
     /// value for a specific property. If no such property exists or if not
-    /// such property value exists, then return `None`.
+    /// such property value exists, then return an error.
     ///
     /// Note that this does not apply to "string" or "miscellaneous" properties
     /// such as `Name` or `Case_Folding`.
@@ -224,14 +285,15 @@ impl PropertyValues {
         &'a self,
         property: &str,
         value: &str,
-    ) -> Option<&'a str> {
-        let property = match self.property.canonical(property) {
-            None => return None,
-            Some(property) => property,
-        };
+    ) -> Result<&'a str> {
+        let property = self.property.canonical(property)?;
         let mut value = value.to_string();
         ucd_util::symbolic_name_normalize(&mut value);
-        self.value.get(&*property).and_then(|m| m.get(&value)).map(|v| &**v)
+        match self.value.get(&*property).and_then(|m| m.get(&value)) {
+            Some(v) => Ok(v),
+            None => err!(
+                "unrecognized property name/value: {:?}", (property, value)),
+        }
     }
 }
 
