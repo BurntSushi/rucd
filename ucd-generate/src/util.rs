@@ -1,10 +1,13 @@
 use std::ascii;
+use std::collections::BTreeMap;
 use std::env;
 use std::io;
+use std::path::Path;
 
 use byteorder::{ByteOrder, BigEndian as BE};
 use fst::raw::Fst;
-use ucd_parse::Codepoint;
+use ucd_parse::{Codepoint, PropertyAlias, PropertyValueAlias};
+use ucd_util;
 
 use error::Result;
 
@@ -130,6 +133,108 @@ pub fn write_slice_string_to_u64<W: io::Write>(
     Ok(())
 }
 
+/// A map from property name (including aliases) to a "canonical" or "long"
+/// version of the property name.
+///
+/// All keys are normalized according to UAX44-LM3.
+#[derive(Clone, Debug)]
+pub struct PropertyNames(BTreeMap<String, String>);
+
+impl PropertyNames {
+    pub fn from_ucd_dir<P: AsRef<Path>>(ucd_dir: P) -> Result<PropertyNames> {
+        use ucd_parse::UcdFile;
+
+        let mut map = BTreeMap::new();
+        for result in PropertyAlias::from_dir(ucd_dir)? {
+            let a = result?;
+            let canon = a.long.to_string();
+            let make_key = |mut value| {
+                ucd_util::symbolic_name_normalize(&mut value);
+                value
+            };
+
+            for alias in a.aliases {
+                map.insert(make_key(alias.into_owned()), canon.clone());
+            }
+            map.insert(make_key(a.abbreviation.into_owned()), canon.clone());
+            map.insert(make_key(a.long.into_owned()), canon);
+        }
+        Ok(PropertyNames(map))
+    }
+
+    /// Return the "canonical" or "long" property name for the given property
+    /// name. If no such property exists, return `None`.
+    pub fn canonical<'a>(&'a self, key: &str) -> Option<&'a str> {
+        let mut key = key.to_string();
+        ucd_util::symbolic_name_normalize(&mut key);
+        self.0.get(&key).map(|v| &**v)
+    }
+}
+
+/// A map from (property name, property value) to a "canonical" or "long"
+/// version of the corresponding property value.
+///
+/// Property names and values are normalized according to UAX44-LM3.
+#[derive(Clone, Debug)]
+pub struct PropertyValues {
+    property: PropertyNames,
+    value: BTreeMap<String, BTreeMap<String, String>>,
+}
+
+impl PropertyValues {
+    pub fn from_ucd_dir<P: AsRef<Path>>(ucd_dir: P) -> Result<PropertyValues> {
+        use ucd_parse::UcdFile;
+
+        let props = PropertyNames::from_ucd_dir(&ucd_dir)?;
+        let mut outer_map = BTreeMap::new();
+        for result in PropertyValueAlias::from_dir(ucd_dir)? {
+            let a = result?;
+            let prop = match props.canonical(&a.property) {
+                Some(name) => name.to_string(),
+                None => return err!(
+                    "unrecognized property name in PropertyValues.txt: {}",
+                    a.property),
+            };
+            let canon = a.long.to_string();
+            let make_key = |mut value| {
+                ucd_util::symbolic_name_normalize(&mut value);
+                value
+            };
+
+            let mut inner_map = outer_map.entry(prop).or_insert(BTreeMap::new());
+            if let Some(n) = a.numeric {
+                inner_map.insert(make_key(n.to_string()), canon.clone());
+            }
+            for alias in a.aliases {
+                inner_map.insert(make_key(alias.into_owned()), canon.clone());
+            }
+            inner_map.insert(make_key(a.abbreviation.into_owned()), canon.clone());
+            inner_map.insert(make_key(a.long.into_owned()), canon);
+        }
+        Ok(PropertyValues { property: props, value: outer_map })
+    }
+
+    /// Return the "canonical" or "long" property value for the given property
+    /// value for a specific property. If no such property exists or if not
+    /// such property value exists, then return `None`.
+    ///
+    /// Note that this does not apply to "string" or "miscellaneous" properties
+    /// such as `Name` or `Case_Folding`.
+    pub fn canonical<'a>(
+        &'a self,
+        property: &str,
+        value: &str,
+    ) -> Option<&'a str> {
+        let property = match self.property.canonical(property) {
+            None => return None,
+            Some(property) => property,
+        };
+        let mut value = value.to_string();
+        ucd_util::symbolic_name_normalize(&mut value);
+        self.value.get(&*property).and_then(|m| m.get(&value)).map(|v| &**v)
+    }
+}
+
 /// Return the given byte as its escaped string form.
 pub fn escape_input(b: u8) -> String {
     String::from_utf8(ascii::escape_default(b).collect::<Vec<_>>()).unwrap()
@@ -140,4 +245,16 @@ pub fn codepoint_key(cp: Codepoint) -> [u8; 4] {
     let mut key = [0; 4];
     BE::write_u32(&mut key, cp.value());
     key
+}
+
+/// Heuristically produce an appropriate constant Rust name.
+pub fn rust_const_name(s: &str) -> String {
+    use std::ascii::AsciiExt;
+
+    // Property names/values seem pretty uniform, particularly the
+    // "canonical" variants we use to produce variable names. So we
+    // don't need to do much.
+    let mut s = s.to_string();
+    s.make_ascii_uppercase();
+    s
 }

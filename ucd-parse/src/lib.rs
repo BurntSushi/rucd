@@ -16,6 +16,8 @@ pub use error::{Error, ErrorKind};
 
 pub use jamo_short_name::JamoShortName;
 pub use name_aliases::{NameAlias, NameAliasLabel};
+pub use property_aliases::PropertyAlias;
+pub use property_value_aliases::PropertyValueAlias;
 pub use unicode_data::{
     UnicodeData, UnicodeDataNumeric,
     UnicodeDataDecomposition, UnicodeDataDecompositionTag,
@@ -33,4 +35,6 @@ mod error;
 
 mod jamo_short_name;
 mod name_aliases;
+mod property_aliases;
+mod property_value_aliases;
 mod unicode_data;
