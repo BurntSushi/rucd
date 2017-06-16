@@ -36,10 +36,6 @@ impl<'a> ArgMatches<'a> {
         self.is_present("raw-fst") || self.is_present("rust-fst")
     }
 
-    pub fn wants_slice(&self) -> bool {
-        self.is_present("rust-slice")
-    }
-
     pub fn write_fst_map<W: io::Write>(
         &self,
         mut wtr: W,
@@ -49,6 +45,7 @@ impl<'a> ArgMatches<'a> {
         if self.is_present("raw-fst") {
             wtr.write_all(&fst.to_vec())?;
         } else {
+            util::write_header(&mut wtr)?;
             util::write_fst_map(wtr, name, &fst)?;
         }
         Ok(())

@@ -37,7 +37,7 @@ pub fn command(args: ArgMatches) -> Result<()> {
         }
     };
 
-    if !args.wants_slice() {
+    if args.wants_fst() {
         let mut builder = MapBuilder::memory();
         for (name, (tag, cp)) in names {
             builder.insert(name.as_bytes(), codepoint(tag, cp))?;
@@ -49,6 +49,7 @@ pub fn command(args: ArgMatches) -> Result<()> {
         for (name, (tag, cp)) in names {
             table.push((name, codepoint(tag, cp)));
         }
+        util::write_header(io::stdout())?;
         util::write_slice_string_to_u64(io::stdout(), args.name(), &table)?;
     }
     Ok(())

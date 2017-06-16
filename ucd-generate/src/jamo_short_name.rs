@@ -11,13 +11,7 @@ pub fn command(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
     let jamo_map = ucd_parse::parse_by_codepoint::<_, JamoShortName>(dir)?;
 
-    if !args.wants_fst() {
-        let mut table = vec![];
-        for (cp, jamo) in jamo_map {
-            table.push((cp.value() as u64, jamo.name.into_owned()));
-        }
-        util::write_slice_u64_to_string(io::stdout(), args.name(), &table)?;
-    } else {
+    if args.wants_fst() {
         let mut builder = MapBuilder::memory();
         for (cp, jamo) in jamo_map {
             let key = util::codepoint_key(cp);
@@ -26,6 +20,13 @@ pub fn command(args: ArgMatches) -> Result<()> {
         }
         let fst = Map::from_bytes(builder.into_inner()?)?;
         args.write_fst_map(io::stdout(), args.name(), fst.as_fst())?;
+    } else {
+        let mut table = vec![];
+        for (cp, jamo) in jamo_map {
+            table.push((cp.value(), jamo.name.into_owned()));
+        }
+        util::write_header(io::stdout())?;
+        util::write_slice_u32_to_string(io::stdout(), args.name(), &table)?;
     }
     Ok(())
 }

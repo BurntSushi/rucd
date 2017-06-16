@@ -100,8 +100,15 @@ pub fn app() -> App<'static, 'static> {
         .arg(ucd_dir.clone())
         .arg(flag_rust_slice.clone())
         .arg(flag_rust_fst.clone())
-        .arg(flag_raw_fst.clone())
-        .arg(flag_name("GENERAL_CATEGORY"));
+        .arg(flag_name("GENERAL_CATEGORY"))
+        .arg(Arg::with_name("chars")
+            .long("chars")
+            .help("Write codepoints as character literals. If a codepoint \
+                   cannot be written as a character literal, then it is \
+                   silently dropped."))
+        .arg(Arg::with_name("no-unassigned")
+            .long("no-unassigned")
+            .help("Don't emit the Unassigned general category."));
     let cmd_jamo_short_name = SubCommand::with_name("jamo-short-name")
         .author(crate_authors!())
         .version(crate_version!())

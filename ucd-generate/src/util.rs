@@ -1,5 +1,6 @@
 use std::ascii;
-use std::collections::{BTreeMap, BTreeSet};
+use std::char;
+use std::collections::BTreeMap;
 use std::env;
 use std::io::{self, Write};
 use std::path::Path;
@@ -44,13 +45,32 @@ pub fn write_fst_map<W: io::Write>(
     name: &str,
     fst: &Fst,
 ) -> Result<()> {
-    write_header(&mut wtr)?;
     writeln!(wtr, "use fst::raw::Fst;")?;
     writeln!(wtr, "use fst::Map;")?;
     writeln!(wtr, "")?;
     writeln!(wtr, "lazy_static! {{")?;
     writeln!(wtr, "  pub static ref {}: Map = ", name)?;
     writeln!(wtr, "    Map::from(Fst::from_static_slice(")?;
+    writeln!( wtr, "      {}_BYTES).unwrap());", name)?;
+    writeln!(wtr, "}}")?;
+    writeln!(wtr, "")?;
+    write_fst_bytes(wtr, name, fst)?;
+    Ok(())
+}
+
+/// Write the given FST set as a lazy static to the given writer. The given
+/// name is used as the name of the static.
+pub fn write_fst_set<W: io::Write>(
+    mut wtr: W,
+    name: &str,
+    fst: &Fst,
+) -> Result<()> {
+    writeln!(wtr, "use fst::raw::Fst;")?;
+    writeln!(wtr, "use fst::Set;")?;
+    writeln!(wtr, "")?;
+    writeln!(wtr, "lazy_static! {{")?;
+    writeln!(wtr, "  pub static ref {}: Set = ", name)?;
+    writeln!(wtr, "    Set::from(Fst::from_static_slice(")?;
     writeln!( wtr, "      {}_BYTES).unwrap());", name)?;
     writeln!(wtr, "}}")?;
     writeln!(wtr, "")?;
@@ -82,34 +102,47 @@ fn write_fst_bytes<W: io::Write>(
     Ok(())
 }
 
-pub fn write_slice_btree_u32<W: io::Write>(
+pub fn write_slice_ranges_u32<W: io::Write>(
     mut wtr: W,
     name: &str,
-    table: &BTreeSet<u32>,
+    table: &[(u32, u32)],
+    as_chars: bool,
 ) -> Result<()> {
-    write_header(&mut wtr)?;
-    writeln!(wtr, "pub const {}: &'static [u32] = &[", name)?;
+    if as_chars {
+        writeln!(wtr, "pub const {}: &'static [(char, char)] = &[", name)?;
+    } else {
+        writeln!(wtr, "pub const {}: &'static [(u32, u32)] = &[", name)?;
+    }
 
     {
         let mut linewtr = LineWriter::new(&mut wtr);
-        for &cp in table {
-            linewtr.write_str(format!("{}, ", cp))?;
+        for &(start, end) in table {
+            if !as_chars {
+                linewtr.write_str(format!("({}, {}), ", start, end))?;
+            } else {
+                let start = match char::from_u32(start) {
+                    None => continue,
+                    Some(start) => start,
+                };
+                let end = match char::from_u32(end) {
+                    None => continue,
+                    Some(end) => end,
+                };
+                linewtr.write_str(format!("({:?}, {:?}), ", start, end))?;
+            }
         }
         linewtr.flush()?;
     }
-
     writeln!(wtr, "];")?;
     Ok(())
 }
 
-pub fn write_slice_u64_to_string<W: io::Write>(
+pub fn write_slice_u32_to_string<W: io::Write>(
     mut wtr: W,
     name: &str,
-    table: &[(u64, String)],
+    table: &[(u32, String)],
 ) -> Result<()> {
-    write_header(&mut wtr)?;
     writeln!(wtr, "pub const {}: &'static [(u32, &'static str)] = &[", name)?;
-
     {
         let mut linewtr = LineWriter::new(&mut wtr);
         for &(cp, ref s) in table {
@@ -117,7 +150,6 @@ pub fn write_slice_u64_to_string<W: io::Write>(
         }
         linewtr.flush()?;
     }
-
     writeln!(wtr, "];")?;
     Ok(())
 }
@@ -127,9 +159,7 @@ pub fn write_slice_string_to_u64<W: io::Write>(
     name: &str,
     table: &[(String, u64)],
 ) -> Result<()> {
-    write_header(&mut wtr)?;
     writeln!(wtr, "pub const {}: &'static [(&'static str, u32)] = &[", name)?;
-
     {
         let mut linewtr = LineWriter::new(&mut wtr);
         for &(ref s, cp) in table {
@@ -137,7 +167,6 @@ pub fn write_slice_string_to_u64<W: io::Write>(
         }
         linewtr.flush()?;
     }
-
     writeln!(wtr, "];")?;
     Ok(())
 }
@@ -297,6 +326,32 @@ impl PropertyValues {
     }
 }
 
+/// Convert an iterator of codepoints into a vec of sorted ranges.
+pub fn to_ranges<I: IntoIterator<Item=u32>>(it: I) -> Vec<(u32, u32)> {
+    let mut codepoints: Vec<u32> = it.into_iter().collect();
+    codepoints.sort();
+    codepoints.dedup();
+
+    let mut ranges = vec![];
+    for cp in codepoints {
+        range_add(&mut ranges, cp);
+    }
+    ranges
+}
+
+/// Push a codepoint onto a vec of ranges. If the codepoint belongs to the
+/// most recently added range, then increase the range. Otherwise, add a new
+/// range containing only the codepoint given.
+pub fn range_add(ranges: &mut Vec<(u32, u32)>, codepoint: u32) {
+    if let Some(&mut (_, ref mut end)) = ranges.last_mut() {
+        if codepoint == *end + 1 {
+            *end = codepoint;
+            return;
+        }
+    }
+    ranges.push((codepoint, codepoint));
+}
+
 /// Return the given byte as its escaped string form.
 pub fn escape_input(b: u8) -> String {
     String::from_utf8(ascii::escape_default(b).collect::<Vec<_>>()).unwrap()
@@ -304,8 +359,13 @@ pub fn escape_input(b: u8) -> String {
 
 /// Return the given codepoint encoded in big-endian.
 pub fn codepoint_key(cp: Codepoint) -> [u8; 4] {
+    u32_key(cp.value())
+}
+
+/// Return the given u32 encoded in big-endian.
+pub fn u32_key(cp: u32) -> [u8; 4] {
     let mut key = [0; 4];
-    BE::write_u32(&mut key, cp.value());
+    BE::write_u32(&mut key, cp);
     key
 }
 
