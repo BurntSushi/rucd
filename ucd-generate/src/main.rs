@@ -30,6 +30,7 @@ mod app;
 mod args;
 mod error;
 mod util;
+mod writer;
 
 mod general_category;
 mod jamo_short_name;

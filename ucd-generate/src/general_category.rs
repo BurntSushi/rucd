@@ -47,18 +47,10 @@ pub fn command(args: ArgMatches) -> Result<()> {
     util::write_header(&mut wtr)?;
     if args.wants_fst() {
         for (name, set) in bycat {
-            // let mut builder = MapBuilder::memory();
-            // for (s, e) in util::to_ranges(set) {
-                // builder.insert(util::u32_key(s), e as u64)?;
-            // }
-
             let mut builder = SetBuilder::memory();
-            // for (s, e) in util::to_ranges(set) {
-                // builder.insert(util::u32_key(s))?;
-                // builder.insert(util::u32_key(e))?;
-            // }
-            builder.extend_iter(set.into_iter().map(util::u32_key))?;
-            // let fst = Map::from_bytes(builder.into_inner()?)?;
+            for cp in set {
+                builder.insert(util::u32_key(cp))?;
+            }
             let fst = Set::from_bytes(builder.into_inner()?)?;
 
             let name = util::rust_const_name(&name);

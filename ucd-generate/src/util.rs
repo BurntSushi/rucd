@@ -369,6 +369,15 @@ pub fn u32_key(cp: u32) -> [u8; 4] {
     key
 }
 
+/// Return the given u32 range encoded as two adjacent big-endian integers.
+#[allow(dead_code)]
+pub fn u32_range_key(start: u32, end: u32) -> [u8; 8] {
+    let mut key = [0; 8];
+    BE::write_u32(&mut key, start);
+    BE::write_u32(&mut key[4..], end);
+    key
+}
+
 /// Heuristically produce an appropriate constant Rust name.
 pub fn rust_const_name(s: &str) -> String {
     use std::ascii::AsciiExt;
