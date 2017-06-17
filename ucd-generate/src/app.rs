@@ -70,22 +70,20 @@ pub fn app() -> App<'static, 'static> {
     // Various common flags and arguments.
     let flag_name = |default| {
         Arg::with_name("name")
-            .help("Set the name of the table in the emitted code.")
             .long("name")
+            .help("Set the name of the table in the emitted code.")
             .takes_value(true)
             .default_value(default)
     };
-    let flag_rust_fst = Arg::with_name("rust-fst")
-        .long("rust-fst")
-        .help("Emit the table as a FST in Rust source codeto stdout.");
-    let flag_raw_fst = Arg::with_name("raw-fst")
-        .long("raw-fst")
-        .help("Emit the table as a raw FST to stdout.\n\
-               Pro-tip: Run `cargo install fst-bin` to install the `fst` \
-               command line tool, which can be used to search the FST.");
-    let flag_rust_slice = Arg::with_name("rust-slice")
-        .long("rust-slice")
-        .help("Emit the table as a static slice that can be binary searched.");
+    let flag_chars = Arg::with_name("chars")
+        .long("chars")
+        .help("Write codepoints as character literals. If a codepoint \
+               cannot be written as a character literal, then it is \
+               silently dropped.");
+    let flag_fst_dir = Arg::with_name("fst-dir")
+        .long("fst-dir")
+        .help("Emit the table as a FST in Rust source codeto stdout.")
+        .takes_value(true);
     let ucd_dir = Arg::with_name("ucd-dir")
         .required(true)
         .help("Directory containing the Unicode character database files.");
@@ -98,14 +96,12 @@ pub fn app() -> App<'static, 'static> {
         .about("Create the General_Category property tables.")
         .before_help(ABOUT_GENERAL_CATEGORY)
         .arg(ucd_dir.clone())
-        .arg(flag_rust_slice.clone())
-        .arg(flag_rust_fst.clone())
+        .arg(flag_fst_dir.clone())
         .arg(flag_name("GENERAL_CATEGORY"))
-        .arg(Arg::with_name("chars")
-            .long("chars")
-            .help("Write codepoints as character literals. If a codepoint \
-                   cannot be written as a character literal, then it is \
-                   silently dropped."))
+        .arg(flag_chars.clone())
+        .arg(Arg::with_name("enum")
+            .long("enum")
+            .help("Emit a single table that maps codepoints to categories."))
         .arg(Arg::with_name("no-unassigned")
             .long("no-unassigned")
             .help("Don't emit the Unassigned general category."));
@@ -116,9 +112,8 @@ pub fn app() -> App<'static, 'static> {
         .about("Create the Jamo_Short_Name property table.")
         .before_help(ABOUT_JAMO_SHORT_NAME)
         .arg(ucd_dir.clone())
-        .arg(flag_rust_slice.clone())
-        .arg(flag_rust_fst.clone())
-        .arg(flag_raw_fst.clone())
+        .arg(flag_fst_dir.clone())
+        .arg(flag_chars.clone())
         .arg(flag_name("JAMO_SHORT_NAME"));
     let cmd_names = SubCommand::with_name("names")
         .author(crate_authors!())
@@ -127,9 +122,8 @@ pub fn app() -> App<'static, 'static> {
         .about("Create a mapping from character name to codepoint.")
         .before_help(ABOUT_NAMES)
         .arg(ucd_dir.clone())
-        .arg(flag_rust_slice.clone())
-        .arg(flag_rust_fst.clone())
-        .arg(flag_raw_fst.clone())
+        .arg(flag_fst_dir.clone())
+        .arg(flag_chars.clone().conflicts_with("tagged"))
         .arg(flag_name("NAMES"))
         .arg(Arg::with_name("no-aliases")
             .long("no-aliases")

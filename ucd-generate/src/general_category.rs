@@ -1,13 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::{self, Write};
 
-use fst::{Set, SetBuilder};
-// use fst::{Map, MapBuilder};
 use ucd_parse::{self, UnicodeDataExpander};
 
 use args::ArgMatches;
 use error::Result;
-use util::{self, PropertyValues};
+use util::PropertyValues;
 
 pub fn command(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
@@ -43,46 +40,14 @@ pub fn command(args: ArgMatches) -> Result<()> {
         }
     }
 
-    let mut wtr = io::BufWriter::new(io::stdout());
-    util::write_header(&mut wtr)?;
-    if args.wants_fst() {
-        for (name, set) in bycat {
-            let mut builder = SetBuilder::memory();
-            for cp in set {
-                builder.insert(util::u32_key(cp))?;
-            }
-            let fst = Set::from_bytes(builder.into_inner()?)?;
-
-            let name = util::rust_const_name(&name);
-            util::write_fst_set(&mut wtr, &name, fst.as_fst())?;
-        }
+    let mut wtr = args.writer("general_category")?;
+    if args.is_present("enum") {
+        wtr.ranges_to_enum("general_category", &bycat)?;
     } else {
         for (name, set) in bycat {
-            let name = util::rust_const_name(&name);
-            let ranges = util::to_ranges(set);
-            util::write_slice_ranges_u32(
-                &mut wtr, &name, &ranges, args.is_present("chars"))?;
-            write!(wtr, "\n")?;
+            wtr.ranges(&name, &set)?;
         }
     }
-
-    // BREADCRUMBS:
-    //
-    // FSTs aren't as much of a space savings as I thought they might be. In
-    // fact, when they're embedded into Rust source code, they use more space
-    // than a simple table. Blech. If we switch to representing ranges instead
-    // of storing every codepoint, then accesses get trickier, which is a
-    // bummer.
-    //
-    // A lot of plumbing needs to happen too:
-    //
-    // 1. Writing FSTs to Rust source doesn't really work right now, since
-    //    emitting each FST also includes `use` statements. Probably just
-    //    use absolute qualification inline.
-    // 2. Add a "previous key" (and maybe "next key"?) methods to FSTs. That
-    //    will enable efficient lookup when the FST stores ranges.
-    // 3. Permit writing FSTs to separate files as a first class option.
-    // 4. Perhaps tries will save us all.
 
     Ok(())
 }

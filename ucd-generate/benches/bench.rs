@@ -6,20 +6,59 @@ extern crate fst;
 extern crate lazy_static;
 extern crate test;
 
+use std::cmp::Ordering;
+
 use byteorder::{ByteOrder, BigEndian as BE};
 use test::Bencher;
 
 mod tables;
 
-fn codepoint_key(cp: u32) -> [u8; 4] {
+fn u32_key(cp: u32) -> [u8; 4] {
     let mut key = [0; 4];
     BE::write_u32(&mut key, cp);
     key
 }
 
 #[bench]
+fn general_category_slice(b: &mut Bencher) {
+    let slice = tables::slice::general_category::GENERAL_CATEGORY;
+    let mut i = 0;
+    b.iter(|| {
+        let (query, _, value) = slice[i];
+        i = (i + 1) % slice.len();
+
+        let pos = slice.binary_search_by(|&(s, e, _)| {
+            if s > query {
+                Ordering::Greater
+            } else if e < query {
+                Ordering::Less
+            } else {
+                Ordering::Equal
+            }
+        });
+        let found = slice[pos.unwrap()];
+        assert_eq!(found.2, value);
+    });
+}
+
+#[bench]
+fn general_category_fst(b: &mut Bencher) {
+    let slice = tables::slice::general_category::GENERAL_CATEGORY;
+    let fst = &tables::fst::general_category::GENERAL_CATEGORY;
+
+    let mut i = 0;
+    b.iter(|| {
+        let (query, _, value) = slice[i];
+        i = (i + 1) % slice.len();
+
+        let found = fst.get(u32_key(query)).unwrap() as u8;
+        assert_eq!(found, value);
+    });
+}
+
+#[bench]
 fn names_slice(b: &mut Bencher) {
-    let slice = tables::names_slice::NAMES;
+    let slice = tables::slice::names::NAMES;
     let mut i = 0;
     b.iter(|| {
         let (name, cp) = slice[i];
@@ -32,8 +71,8 @@ fn names_slice(b: &mut Bencher) {
 
 #[bench]
 fn names_fst(b: &mut Bencher) {
-    let slice = tables::names_slice::NAMES;
-    let fst = &tables::names_fst::NAMES;
+    let slice = tables::slice::names::NAMES;
+    let fst = &tables::fst::names::NAMES;
 
     let mut i = 0;
     b.iter(|| {
@@ -47,15 +86,15 @@ fn names_fst(b: &mut Bencher) {
 
 #[bench]
 fn jamo_short_name_fst(b: &mut Bencher) {
-    let slice = tables::jamo_short_name_slice::JAMO_SHORT_NAME;
-    let fst = &tables::jamo_short_name_fst::JAMO_SHORT_NAME;
+    let slice = tables::slice::jamo_short_name::JAMO_SHORT_NAME;
+    let fst = &tables::fst::jamo_short_name::JAMO_SHORT_NAME;
     let mut i = 0;
     let mut value = String::new();
     b.iter(|| {
         let (cp, name) = slice[i];
         i = (i + 1) % slice.len();
 
-        let mut found = fst.get(codepoint_key(cp)).unwrap();
+        let mut found = fst.get(u32_key(cp)).unwrap();
         value.clear();
         while found != 0 {
             value.push((found & 0xFF) as u8 as char);
@@ -67,7 +106,7 @@ fn jamo_short_name_fst(b: &mut Bencher) {
 
 #[bench]
 fn jamo_short_name_slice(b: &mut Bencher) {
-    let slice = tables::jamo_short_name_slice::JAMO_SHORT_NAME;
+    let slice = tables::slice::jamo_short_name::JAMO_SHORT_NAME;
     let mut i = 0;
     b.iter(|| {
         let (cp, name) = slice[i];
@@ -80,7 +119,7 @@ fn jamo_short_name_slice(b: &mut Bencher) {
 
 #[bench]
 fn jamo_short_name_slice_linear(b: &mut Bencher) {
-    let slice = tables::jamo_short_name_slice::JAMO_SHORT_NAME;
+    let slice = tables::slice::jamo_short_name::JAMO_SHORT_NAME;
     let mut i = 0;
     b.iter(|| {
         let (cp, name) = slice[i];

@@ -1,12 +1,10 @@
 use std::ffi::OsStr;
-use std::io;
 use std::ops;
 
 use clap;
-use fst::raw::Fst;
 
 use error::Result;
-use util;
+use writer::{Writer, WriterBuilder};
 
 /// Wraps clap matches and provides convenient accessors to various parameters.
 pub struct ArgMatches<'a>(&'a clap::ArgMatches<'a>);
@@ -28,26 +26,18 @@ impl<'a> ArgMatches<'a> {
         }
     }
 
+    pub fn writer(&self, name: &str) -> Result<Writer> {
+        let mut builder = WriterBuilder::new(name);
+        builder
+            .columns(79)
+            .char_literals(self.is_present("chars"));
+        match self.value_of_os("fst-dir") {
+            None => Ok(builder.from_stdout()),
+            Some(x) => builder.from_fst_dir(x),
+        }
+    }
+
     pub fn name(&self) -> &str {
         self.value_of("name").expect("the name of the table")
-    }
-
-    pub fn wants_fst(&self) -> bool {
-        self.is_present("raw-fst") || self.is_present("rust-fst")
-    }
-
-    pub fn write_fst_map<W: io::Write>(
-        &self,
-        mut wtr: W,
-        name: &str,
-        fst: &Fst,
-    ) -> Result<()> {
-        if self.is_present("raw-fst") {
-            wtr.write_all(&fst.to_vec())?;
-        } else {
-            util::write_header(&mut wtr)?;
-            util::write_fst_map(wtr, name, &fst)?;
-        }
-        Ok(())
     }
 }

@@ -1,13 +1,10 @@
 use std::collections::BTreeMap;
-use std::io;
 
-use fst::{Map, MapBuilder};
 use ucd_parse::{self, Codepoint, UnicodeData, NameAlias};
 use ucd_util;
 
 use args::ArgMatches;
 use error::Result;
-use util;
 
 pub fn command(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
@@ -29,28 +26,20 @@ pub fn command(args: ArgMatches) -> Result<()> {
             (name, tagged)
         }).collect();
     }
-    let codepoint = |tag: NameTag, cp: u32| -> u64 {
-        if args.is_present("tagged") {
-            tag.with_codepoint(cp)
-        } else {
-            cp as u64
-        }
-    };
 
-    if args.wants_fst() {
-        let mut builder = MapBuilder::memory();
+    let mut wtr = args.writer("names")?;
+    if args.is_present("tagged") {
+        let mut map = BTreeMap::new();
         for (name, (tag, cp)) in names {
-            builder.insert(name.as_bytes(), codepoint(tag, cp))?;
+            map.insert(name, tag.with_codepoint(cp));
         }
-        let fst = Map::from_bytes(builder.into_inner()?)?;
-        args.write_fst_map(io::stdout(), args.name(), fst.as_fst())?;
+        wtr.string_to_u64(args.name(), &map)?;
     } else {
-        let mut table = vec![];
-        for (name, (tag, cp)) in names {
-            table.push((name, codepoint(tag, cp)));
+        let mut map = BTreeMap::new();
+        for (name, (_, cp)) in names {
+            map.insert(name, cp);
         }
-        util::write_header(io::stdout())?;
-        util::write_slice_string_to_u64(io::stdout(), args.name(), &table)?;
+        wtr.string_to_codepoint(args.name(), &map)?;
     }
     Ok(())
 }
@@ -94,6 +83,16 @@ fn names_to_codepoint(
     ideograph: bool,
     hangul: bool,
 ) -> BTreeMap<String, (NameTag, u32)> {
+    // The order in which we write names is important, since there is some
+    // overlap.
+    //
+    // Basically, if a character has a "canonical" name that is equivalent to
+    // one of its aliases, then overwrite the alias with the canonical name.
+    // The effect is that its tag will be Explicit rather than Alias.
+    //
+    // Additionally, write the algorithmically generated names after
+    // everything, so that even if a algorithmically generated name matches
+    // an Explicit/Alias name, its tag will indicate that it is generated.
     let mut map = BTreeMap::new();
     if let Some(ref alias_map) = *aliases {
         for (cp, aliases) in alias_map {
