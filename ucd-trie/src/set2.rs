@@ -9,17 +9,17 @@ pub struct TrieSet {
     four: Four,
 }
 
-struct OneOrTwo(Vec<u64>);
+struct OneOrTwo(Vec<u8>);
 
 struct Three {
     level1: Vec<u8>,
-    level2: Vec<u64>,
+    level2: Vec<u8>,
 }
 
 struct Four {
     level1: Vec<u8>,
     level2: Vec<u8>,
-    level3: Vec<u64>,
+    level3: Vec<u8>,
 }
 
 pub struct TrieSetSlice<'a> {
@@ -28,17 +28,17 @@ pub struct TrieSetSlice<'a> {
     four: FourSlice<'a>,
 }
 
-struct OneOrTwoSlice<'a>(&'a [u64]);
+struct OneOrTwoSlice<'a>(&'a [u8]);
 
 struct ThreeSlice<'a> {
     level1: &'a [u8],
-    level2: &'a [u64],
+    level2: &'a [u8],
 }
 
 struct FourSlice<'a> {
     level1: &'a [u8],
     level2: &'a [u8],
-    level3: &'a [u64],
+    level3: &'a [u8],
 }
 
 impl TrieSet {
@@ -75,10 +75,10 @@ impl TrieSet {
 
     fn new(all: &[bool]) -> TrieSet {
         let mut bitvectors = Vec::with_capacity(CHUNKS);
-        for i in 0..CHUNKS {
-            let mut bitvector = 0u64;
-            for j in 0..CHUNK_SIZE {
-                if all[i * CHUNK_SIZE + j] {
+        for i in 0..(0x110000 / 8) {
+            let mut bitvector = 0u8;
+            for j in 0..8 {
+                if all[i * 8 + j] {
                     bitvector |= 1 << j;
                 }
             }
@@ -88,15 +88,15 @@ impl TrieSet {
         let oneortwo = OneOrTwo(
             bitvectors.iter()
                 .cloned()
-                .take(0x800 / CHUNK_SIZE)
+                .take(0x800 / 8)
                 .collect());
 
-        let (level1, level2) = compress_postfix_leaves(
-            &bitvectors[0x800 / CHUNK_SIZE..0x10000 / CHUNK_SIZE]);
+        let (level1, level2) = compress_postfix_mid(
+            &bitvectors[0x800 / 8..0x10000 / 8], 8);
         let three = Three { level1: level1, level2: level2 };
 
-        let (mid, level3) = compress_postfix_leaves(
-            &bitvectors[0x10000 / CHUNK_SIZE..0x110000 / CHUNK_SIZE]);
+        let (mid, level3) = compress_postfix_mid(
+            &bitvectors[0x10000 / 8..0x110000 / 8], 8);
         let (level1, level2) = compress_postfix_mid(&mid, 64);
         let four = Four {
             level1: level1, level2: level2, level3: level3,
@@ -117,6 +117,58 @@ impl TrieSet {
         self.contains(cp as usize)
     }
 
+    // #[inline(always)]
+    // fn contains(&self, cp: usize) -> bool {
+        // if cp < 0x800 {
+            // self.chunk_contains(cp, self.oneortwo.0[cp >> 6])
+        // } else if cp < 0x10000 {
+            // let leaf = self.three.level1[(cp >> 6) - 0x20];
+            // self.chunk_contains(cp, self.three.level2[leaf as usize])
+        // } else {
+            // let child = self.four.level1[(cp >> 12) - 0x10];
+            // let i = ((child as usize) * CHUNK_SIZE) + ((cp >> 6) & 0b111111);
+            // let leaf = self.four.level2[i];
+            // self.chunk_contains(cp, self.four.level3[leaf as usize])
+        // }
+    // }
+
+    #[inline(always)]
+    fn contains(&self, cp: usize) -> bool {
+        if cp < 0x800 {
+            let i = ((cp >> 6) * 8) + ((cp & 0b111111) >> 3);
+            let bitv = self.oneortwo.0[i];
+            ((bitv >> (cp & 0b111)) & 1) != 0
+        } else if cp < 0x10000 {
+            let leaf = self.three.level1[(cp >> 6) - 0x20] as usize;
+            let i = (leaf * 8) + ((cp & 0b111111) >> 3);
+            let bitv = self.three.level2[i as usize] as usize;
+            ((bitv >> (cp & 0b111)) & 1) != 0
+        } else {
+            let child = self.four.level1[(cp >> 12) - 0x10];
+            let i = ((child as usize) * CHUNK_SIZE) + ((cp >> 6) & 0b111111);
+            let leaf = self.four.level2[i] as usize;
+            let i = (leaf * 8) + ((cp & 0b111111) >> 3);
+            let bitv = self.four.level3[i as usize];
+            ((bitv >> (cp & 0b111)) & 1) != 0
+        }
+    }
+
+    #[inline(always)]
+    fn chunk_contains(&self, cp: usize, chunk: u64) -> bool {
+        ((chunk >> (cp & 63)) & 1) != 0
+    }
+}
+
+impl<'a> TrieSetSlice<'a> {
+    pub fn contains_char(&self, c: char) -> bool {
+        self.contains(c as usize)
+    }
+
+    pub fn contains_u32(&self, cp: u32) -> bool {
+        self.contains(cp as usize)
+    }
+
+    /*
     #[inline(always)]
     fn contains(&self, cp: usize) -> bool {
         if cp < 0x800 {
@@ -131,41 +183,26 @@ impl TrieSet {
             self.chunk_contains(cp, self.four.level3[leaf as usize])
         }
     }
-
-    #[inline(always)]
-    fn chunk_contains(&self, cp: usize, chunk: u64) -> bool {
-        ((chunk >> (cp & 63)) & 1) != 0
-    }
-}
-
-// BREADCRUMBS:
-//
-// A pure byte based representation with modified `contains` is slower
-// since there's more bit arithmetic that needs to be done. Experiment with
-// a pure byte representation but transmute chunks to u64 to roughly preserve
-// existing byte arithmetic.
-
-impl<'a> TrieSetSlice<'a> {
-    pub fn contains_char(&self, c: char) -> bool {
-        self.contains(c as usize)
-    }
-
-    pub fn contains_u32(&self, cp: u32) -> bool {
-        self.contains(cp as usize)
-    }
+    */
 
     #[inline(always)]
     fn contains(&self, cp: usize) -> bool {
         if cp < 0x800 {
-            self.chunk_contains(cp, self.oneortwo.0[cp >> 6])
+            let i = ((cp >> 6) * 8) + ((cp & 0b111111) >> 3);
+            let bitv = self.oneortwo.0[i];
+            ((bitv >> (cp & 0b111)) & 1) != 0
         } else if cp < 0x10000 {
-            let leaf = self.three.level1[(cp >> 6) - 0x20];
-            self.chunk_contains(cp, self.three.level2[leaf as usize])
+            let leaf = self.three.level1[(cp >> 6) - 0x20] as usize;
+            let i = (leaf * 8) + ((cp & 0b111111) >> 3);
+            let bitv = self.three.level2[i as usize];
+            ((bitv >> (cp & 0b111)) & 1) != 0
         } else {
             let child = self.four.level1[(cp >> 12) - 0x10];
             let i = ((child as usize) * CHUNK_SIZE) + ((cp >> 6) & 0b111111);
-            let leaf = self.four.level2[i];
-            self.chunk_contains(cp, self.four.level3[leaf as usize])
+            let leaf = self.four.level2[i] as usize;
+            let i = (leaf * 8) + ((cp & 0b111111) >> 3);
+            let bitv = self.four.level3[i as usize];
+            ((bitv >> (cp & 0b111)) & 1) != 0
         }
     }
 

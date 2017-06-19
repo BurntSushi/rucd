@@ -7,8 +7,8 @@ use ucd_trie::TrieSet;
 
 #[bench]
 fn bench_trie_set(b: &mut test::Bencher) {
-    // let chars = &['a', 'β', '☃', '😼'];
-    let chars = &['a'];
+    let chars = &['a', 'β', '☃', '😼'];
+    // let chars = &['a'];
     let set = TrieSet::from_scalars(chars);
 
     let mut i = 0;
@@ -24,8 +24,8 @@ fn bench_trie_set(b: &mut test::Bencher) {
 
 #[bench]
 fn bench_trie_set_slice(b: &mut test::Bencher) {
-    // let chars = &['a', 'β', '☃', '😼'];
-    let chars = &['a'];
+    let chars = &['a', 'β', '☃', '😼'];
+    // let chars = &['a'];
     let set = TrieSet::from_scalars(chars);
     let set = set.as_slice();
 
