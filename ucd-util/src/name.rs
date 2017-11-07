@@ -2,7 +2,7 @@
 ///
 /// See: http://unicode.org/reports/tr44/#UAX44-LM2
 pub fn character_name_normalize(string: &mut String) {
-    let mut bytes = unsafe {
+    let bytes = unsafe {
         // SAFETY: `character_name_normalize_bytes` guarantees that
         // `bytes[..len]` is valid UTF-8.
         string.as_mut_vec()
@@ -44,7 +44,7 @@ pub fn character_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
             // here.
             let rest_e = slice[i+1..] == b"E"[..] || slice[i+1..] == b"e"[..];
             if !keep_hyphen && rest_e {
-                keep_hyphen = slice[..next_write] ==  b"hanguljungseongo"[..];
+                keep_hyphen = slice[..next_write] == b"hanguljungseongo"[..];
             }
             if keep_hyphen {
                 slice[next_write] = b;
@@ -70,7 +70,7 @@ pub fn character_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
 ///
 /// See: http://unicode.org/reports/tr44/#UAX44-LM2
 pub fn symbolic_name_normalize(string: &mut String) {
-    let mut bytes = unsafe {
+    let bytes = unsafe {
         // SAFETY: `symbolic_name_normalize_bytes` guarantees that
         // `bytes[..len]` is valid UTF-8.
         string.as_mut_vec()

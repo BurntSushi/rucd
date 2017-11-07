@@ -1,40 +1,27 @@
 #![feature(test)]
 
+#[macro_use]
+extern crate lazy_static;
 extern crate test;
 extern crate ucd_trie;
 
-use ucd_trie::TrieSet;
+use ucd_trie::TrieSetOwned;
 
 #[bench]
 fn bench_trie_set(b: &mut test::Bencher) {
-    let chars = &['a', 'β', '☃', '😼'];
-    // let chars = &['a'];
-    let set = TrieSet::from_scalars(chars);
+    const CHARS: &'static [char] = &['a', 'β', '☃', '😼'];
+    // const CHARS: &'static [char] = &['a'];
+    lazy_static! {
+        static ref SET: TrieSetOwned = TrieSetOwned::from_scalars(CHARS);
+    }
 
+    let set = &*SET;
     let mut i = 0;
     b.iter(|| {
-        let c = chars[i];
-        i = (i + 1) % chars.len();
+        let c = CHARS[i];
+        i = (i + 1) % CHARS.len();
 
-        for _ in 0..1000 {
-            assert!(set.contains_char(c));
-        }
-    });
-}
-
-#[bench]
-fn bench_trie_set_slice(b: &mut test::Bencher) {
-    let chars = &['a', 'β', '☃', '😼'];
-    // let chars = &['a'];
-    let set = TrieSet::from_scalars(chars);
-    let set = set.as_slice();
-
-    let mut i = 0;
-    b.iter(|| {
-        let c = chars[i];
-        i = (i + 1) % chars.len();
-
-        for _ in 0..1000 {
+        for _ in 0..10000 {
             assert!(set.contains_char(c));
         }
     });

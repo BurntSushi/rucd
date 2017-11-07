@@ -12,5 +12,12 @@ readme = "README.md"
 keywords = ["unicode", "database", "character", "codepoint", "trie"]
 license = "Unlicense/MIT"
 
+[dev-dependencies]
+lazy_static = "0.2"
+
+[features]
+default = ["std"]
+std = []
+
 [profile.release]
 debug = true
