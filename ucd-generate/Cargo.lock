@@ -141,6 +141,7 @@ dependencies = [
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "ucd-parse 0.0.1",
+ "ucd-trie 0.0.1",
  "ucd-util 0.0.1",
 ]
 
@@ -151,6 +152,10 @@ dependencies = [
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "ucd-trie"
+version = "0.0.1"
 
 [[package]]
 name = "ucd-util"

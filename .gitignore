@@ -8,4 +8,4 @@ Cargo.lock
 scratch*
 bench_large/huge
 x
-!rucd-generate/Cargo.toml
+perf.data*

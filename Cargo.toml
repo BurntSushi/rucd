@@ -21,7 +21,7 @@ lazy_static = "0.2"
 regex = "0.2"
 tabwriter = "1"
 ucd-util = { version = "0.0.1", path = "ucd-util" }
-unicode-width = "*"
+unicode-width = "0.1.4"
 
 [profile.release]
 debug = true

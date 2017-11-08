@@ -31,6 +31,7 @@ use byteorder::{ByteOrder, BigEndian as BE};
 use fst::{Map, MapBuilder, Set, SetBuilder};
 use fst::raw::Fst;
 use ucd_parse::Codepoint;
+use ucd_trie::TrieSetOwned;
 
 use error::Result;
 use util;
@@ -44,6 +45,7 @@ struct WriterOptions {
     columns: u64,
     char_literals: bool,
     fst_dir: Option<PathBuf>,
+    trie_set: bool,
 }
 
 impl WriterBuilder {
@@ -57,6 +59,7 @@ impl WriterBuilder {
             columns: 79,
             char_literals: false,
             fst_dir: None,
+            trie_set: false,
         })
     }
 
@@ -100,6 +103,13 @@ impl WriterBuilder {
     /// surrogate codepoints) are silently dropped when writing.
     pub fn char_literals(&mut self, yes: bool) -> &mut WriterBuilder {
         self.0.char_literals = yes;
+        self
+    }
+
+    /// Emit a trie when writing sets of codepoints instead of a slice of
+    /// ranges.
+    pub fn trie_set(&mut self, yes: bool) -> &mut WriterBuilder {
+        self.0.trie_set = yes;
         self
     }
 
@@ -149,6 +159,10 @@ impl Writer {
             builder.extend_iter(codepoints.iter().cloned().map(u32_key))?;
             let set = Set::from_bytes(builder.into_inner()?)?;
             self.fst(&name, set.as_fst(), false)?;
+        } else if self.opts.trie_set {
+            let set: Vec<u32> = codepoints.iter().cloned().collect();
+            let trie = TrieSetOwned::from_codepoints(&set)?;
+            self.trie_set(&name, &trie)?;
         } else {
             let ranges = util::to_ranges(codepoints.iter().cloned());
             self.ranges_slice(&name, &ranges)?;
@@ -174,6 +188,48 @@ impl Writer {
             }
         }
         writeln!(self.wtr, "];")?;
+        Ok(())
+    }
+
+    fn trie_set(
+        &mut self,
+        name: &str,
+        trie: &TrieSetOwned,
+    ) -> Result<()> {
+        let trie = trie.as_slice();
+        writeln!(
+            self.wtr,
+            "pub const {}: &'static ::ucd_trie::TrieSet = \
+                &::ucd_trie::TrieSet {{",
+            name)?;
+
+        self.wtr.indent("    ");
+
+        writeln!(self.wtr, "  tree1_level1: &[")?;
+        self.write_slice_u64(&trie.tree1_level1)?;
+        writeln!(self.wtr, "  ],")?;
+
+        writeln!(self.wtr, "  tree2_level1: &[")?;
+        self.write_slice_u8(&trie.tree2_level1)?;
+        writeln!(self.wtr, "  ],")?;
+
+        writeln!(self.wtr, "  tree2_level2: &[")?;
+        self.write_slice_u64(&trie.tree2_level2)?;
+        writeln!(self.wtr, "  ],")?;
+
+        writeln!(self.wtr, "  tree3_level1: &[")?;
+        self.write_slice_u8(&trie.tree3_level1)?;
+        writeln!(self.wtr, "  ],")?;
+
+        writeln!(self.wtr, "  tree3_level2: &[")?;
+        self.write_slice_u8(&trie.tree3_level2)?;
+        writeln!(self.wtr, "  ],")?;
+
+        writeln!(self.wtr, "  tree3_level3: &[")?;
+        self.write_slice_u64(&trie.tree3_level3)?;
+        writeln!(self.wtr, "  ],")?;
+
+        writeln!(self.wtr, "}};")?;
         Ok(())
     }
 
@@ -427,6 +483,24 @@ impl Writer {
             self.wtr,
             "      include_bytes!({:?})).unwrap());", fst_file_name)?;
         writeln!(self.wtr, "}}")?;
+        Ok(())
+    }
+
+    fn write_slice_u8(&mut self, xs: &[u8]) -> Result<()> {
+        for &x in xs {
+            self.wtr.write_str(&format!("{}, ", x))?;
+        }
+        Ok(())
+    }
+
+    fn write_slice_u64(&mut self, xs: &[u64]) -> Result<()> {
+        for &x in xs {
+            if x == 0 {
+                self.wtr.write_str("0, ")?;
+            } else {
+                self.wtr.write_str(&format!("0x{:X}, ", x))?;
+            }
+        }
         Ok(())
     }
 

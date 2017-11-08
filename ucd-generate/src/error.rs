@@ -6,6 +6,7 @@ use std::result;
 use fst;
 use clap;
 use ucd_parse;
+use ucd_trie;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -73,6 +74,12 @@ impl From<fst::Error> for Error {
 
 impl From<ucd_parse::Error> for Error {
     fn from(err: ucd_parse::Error) -> Error {
+        Error::Other(err.to_string())
+    }
+}
+
+impl From<ucd_trie::Error> for Error {
+    fn from(err: ucd_trie::Error) -> Error {
         Error::Other(err.to_string())
     }
 }

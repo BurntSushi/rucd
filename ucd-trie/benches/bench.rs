@@ -12,7 +12,8 @@ fn bench_trie_set(b: &mut test::Bencher) {
     const CHARS: &'static [char] = &['a', 'β', '☃', '😼'];
     // const CHARS: &'static [char] = &['a'];
     lazy_static! {
-        static ref SET: TrieSetOwned = TrieSetOwned::from_scalars(CHARS);
+        static ref SET: TrieSetOwned =
+            TrieSetOwned::from_scalars(CHARS).unwrap();
     }
 
     let set = &*SET;

@@ -5,6 +5,7 @@ extern crate fst;
 #[macro_use]
 extern crate lazy_static;
 extern crate test;
+extern crate ucd_trie;
 
 use std::cmp::Ordering;
 
@@ -53,6 +54,39 @@ fn general_category_fst(b: &mut Bencher) {
 
         let found = fst.get(u32_key(query)).unwrap() as u8;
         assert_eq!(found, value);
+    });
+}
+
+#[bench]
+fn lowercase_letter_slice(b: &mut Bencher) {
+    let slice = tables::slice::general_categories::LOWERCASE_LETTER;
+    let mut i = 0;
+    b.iter(|| {
+        let (query, _) = slice[i];
+        i = (i + 1) % slice.len();
+
+        let pos = slice.binary_search_by(|&(s, e)| {
+            if s > query {
+                Ordering::Greater
+            } else if e < query {
+                Ordering::Less
+            } else {
+                Ordering::Equal
+            }
+        });
+        assert!(pos.is_ok());
+    });
+}
+
+#[bench]
+fn lowercase_letter_trie(b: &mut Bencher) {
+    let slice = tables::slice::general_categories::LOWERCASE_LETTER;
+    let trie = tables::trie::general_categories::LOWERCASE_LETTER;
+    let mut i = 0;
+    b.iter(|| {
+        let (query, _) = slice[i];
+        i = (i + 1) % slice.len();
+        assert!(trie.contains_u32(query));
     });
 }
 

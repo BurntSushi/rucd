@@ -3,6 +3,7 @@ extern crate byteorder;
 extern crate clap;
 extern crate fst;
 extern crate ucd_parse;
+extern crate ucd_trie;
 extern crate ucd_util;
 
 use std::io::{self, Write};

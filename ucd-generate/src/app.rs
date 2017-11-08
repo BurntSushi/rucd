@@ -80,9 +80,13 @@ pub fn app() -> App<'static, 'static> {
         .help("Write codepoints as character literals. If a codepoint \
                cannot be written as a character literal, then it is \
                silently dropped.");
+    let flag_trie_set = Arg::with_name("trie-set")
+        .long("trie-set")
+        .help("Write codepoint sets as a compressed trie. \
+               Code using this trie depends on the ucd_trie crate.");
     let flag_fst_dir = Arg::with_name("fst-dir")
         .long("fst-dir")
-        .help("Emit the table as a FST in Rust source codeto stdout.")
+        .help("Emit the table as a FST in Rust source code.")
         .takes_value(true);
     let ucd_dir = Arg::with_name("ucd-dir")
         .required(true)
@@ -99,6 +103,7 @@ pub fn app() -> App<'static, 'static> {
         .arg(flag_fst_dir.clone())
         .arg(flag_name("GENERAL_CATEGORY"))
         .arg(flag_chars.clone())
+        .arg(flag_trie_set.clone())
         .arg(Arg::with_name("enum")
             .long("enum")
             .help("Emit a single table that maps codepoints to categories."))
