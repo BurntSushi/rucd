@@ -102,6 +102,10 @@ impl<'a> PropertyValueAlias<'a> {
         if let Some(m) = caps.name("aliases") {
             for acaps in ALIASES.captures_iter(m.as_str()) {
                 let alias = acaps.name("alias").unwrap().as_str();
+                if alias == "#" {
+                    // This starts a comment, so stop reading.
+                    break;
+                }
                 aliases.push(Cow::Borrowed(alias));
             }
         }
@@ -180,5 +184,16 @@ mod tests {
         assert_eq!(row.abbreviation, "CCC133");
         assert_eq!(row.long, "CCC133");
         assert!(row.aliases.is_empty());
+    }
+
+    #[test]
+    fn parse6() {
+        let line = "gc ; P                                ; Punctuation                      ; punct                            # Pc | Pd | Pe | Pf | Pi | Po | Ps\n";
+        let row: PropertyValueAlias = line.parse().unwrap();
+        assert_eq!(row.property, "gc");
+        assert_eq!(row.numeric, None);
+        assert_eq!(row.abbreviation, "P");
+        assert_eq!(row.long, "Punctuation");
+        assert_eq!(row.aliases, vec!["punct"]);
     }
 }
