@@ -86,6 +86,20 @@ impl PropertyValues {
         Ok(PropertyValues { property: props, value: outer_map })
     }
 
+    /// Return a map from property value (including aliases) to canonical
+    /// property value for the given property. If no such property exists,
+    /// then return an error.
+    pub fn values<'a>(
+        &'a self,
+        property: &str,
+    ) -> Result<&'a BTreeMap<String, String>> {
+        let property = self.property.canonical(property)?;
+        match self.value.get(&*property) {
+            Some(map) => Ok(map),
+            None => err!("unrecognized property name: {:?}", property),
+        }
+    }
+
     /// Return the "canonical" or "long" property value for the given property
     /// value for a specific property. If no such property exists or if not
     /// such property value exists, then return an error.

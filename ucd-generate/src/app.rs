@@ -107,9 +107,20 @@ pub fn app() -> App<'static, 'static> {
         .arg(Arg::with_name("enum")
             .long("enum")
             .help("Emit a single table that maps codepoints to categories."))
-        .arg(Arg::with_name("no-unassigned")
-            .long("no-unassigned")
-            .help("Don't emit the Unassigned general category."));
+        .arg(Arg::with_name("include")
+            .long("include")
+            .takes_value(true)
+            .help("A comma separated list of categories to include. \
+                   When absent, all categories are included."))
+        .arg(Arg::with_name("exclude")
+            .long("exclude")
+            .takes_value(true)
+            .help("A comma separated list of categories to exclude. \
+                   When absent, no categories are excluded. This overrides \
+                   categories specified with the --include flag."))
+        .arg(Arg::with_name("list-categories")
+            .long("list-categories")
+            .help("List all of the category names with abbreviations."));
     let cmd_jamo_short_name = SubCommand::with_name("jamo-short-name")
         .author(crate_authors!())
         .version(crate_version!())

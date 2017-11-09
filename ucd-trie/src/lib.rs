@@ -92,10 +92,16 @@ impl<'a> TrieSetSlice<'a> {
         if cp < 0x800 {
             self.chunk_contains(cp, self.tree1_level1[cp >> 6])
         } else if cp < 0x10000 {
-            let leaf = self.tree2_level1[(cp >> 6) - 0x20];
+            let leaf = match self.tree2_level1.get((cp >> 6) - 0x20) {
+                None => return false,
+                Some(&leaf) => leaf,
+            };
             self.chunk_contains(cp, self.tree2_level2[leaf as usize])
         } else {
-            let child = self.tree3_level1[(cp >> 12) - 0x10];
+            let child = match self.tree3_level1.get((cp >> 12) - 0x10) {
+                None => return false,
+                Some(&child) => child,
+            };
             let i = ((child as usize) * CHUNK_SIZE) + ((cp >> 6) & 0b111111);
             let leaf = self.tree3_level2[i];
             self.chunk_contains(cp, self.tree3_level3[leaf as usize])

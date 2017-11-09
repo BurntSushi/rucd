@@ -50,6 +50,10 @@ use super::{CHUNK_SIZE, TrieSetSlice};
 //     let is_member = 1 == ((chunk >> chunk_bit) & 1);
 //
 // And so on for the third partition.
+//
+// Note that as a special case, if the second or third partitions are empty,
+// then the trie will store empty slices for those levels. The `contains`
+// check knows to return `false` in those cases.
 
 const CHUNKS: usize = 0x110000 / CHUNK_SIZE;
 
@@ -132,12 +136,22 @@ impl TrieSetOwned {
             .take(0x800 / CHUNK_SIZE)
             .collect();
 
-        let (tree2_level1, tree2_level2) = compress_postfix_leaves(
+        let (mut tree2_level1, mut tree2_level2) = compress_postfix_leaves(
             &bitvectors[0x800 / CHUNK_SIZE..0x10000 / CHUNK_SIZE])?;
+        if tree2_level2.len() == 1 && tree2_level2[0] == 0 {
+            tree2_level1.clear();
+            tree2_level2.clear();
+        }
 
-        let (mid, tree3_level3) = compress_postfix_leaves(
+        let (mid, mut tree3_level3) = compress_postfix_leaves(
             &bitvectors[0x10000 / CHUNK_SIZE..0x110000 / CHUNK_SIZE])?;
-        let (tree3_level1, tree3_level2) = compress_postfix_mid(&mid, 64)?;
+        let (mut tree3_level1, mut tree3_level2) =
+            compress_postfix_mid(&mid, 64)?;
+        if tree3_level3.len() == 1 && tree3_level3[0] == 0 {
+            tree3_level1.clear();
+            tree3_level2.clear();
+            tree3_level3.clear();
+        }
 
         Ok(TrieSetOwned {
             tree1_level1,
@@ -310,6 +324,7 @@ mod tests {
         }
     }
 
+    category_test!(gencat_cased_letter, CASED_LETTER);
     category_test!(gencat_close_punctuation, CLOSE_PUNCTUATION);
     category_test!(gencat_connector_punctuation, CONNECTOR_PUNCTUATION);
     category_test!(gencat_control, CONTROL);
@@ -320,23 +335,30 @@ mod tests {
     category_test!(gencat_final_punctuation, FINAL_PUNCTUATION);
     category_test!(gencat_format, FORMAT);
     category_test!(gencat_initial_punctuation, INITIAL_PUNCTUATION);
+    category_test!(gencat_letter, LETTER);
     category_test!(gencat_letter_number, LETTER_NUMBER);
     category_test!(gencat_line_separator, LINE_SEPARATOR);
     category_test!(gencat_lowercase_letter, LOWERCASE_LETTER);
     category_test!(gencat_math_symbol, MATH_SYMBOL);
+    category_test!(gencat_mark, MARK);
     category_test!(gencat_modifier_letter, MODIFIER_LETTER);
     category_test!(gencat_modifier_symbol, MODIFIER_SYMBOL);
     category_test!(gencat_nonspacing_mark, NONSPACING_MARK);
+    category_test!(gencat_number, NUMBER);
     category_test!(gencat_open_punctuation, OPEN_PUNCTUATION);
+    category_test!(gencat_other, OTHER);
     category_test!(gencat_other_letter, OTHER_LETTER);
     category_test!(gencat_other_number, OTHER_NUMBER);
     category_test!(gencat_other_punctuation, OTHER_PUNCTUATION);
     category_test!(gencat_other_symbol, OTHER_SYMBOL);
     category_test!(gencat_paragraph_separator, PARAGRAPH_SEPARATOR);
     category_test!(gencat_private_use, PRIVATE_USE);
+    category_test!(gencat_punctuation, PUNCTUATION);
+    category_test!(gencat_separator, SEPARATOR);
     category_test!(gencat_space_separator, SPACE_SEPARATOR);
     category_test!(gencat_spacing_mark, SPACING_MARK);
     category_test!(gencat_surrogate, SURROGATE);
+    category_test!(gencat_symbol, SYMBOL);
     category_test!(gencat_titlecase_letter, TITLECASE_LETTER);
     category_test!(gencat_unassigned, UNASSIGNED);
     category_test!(gencat_uppercase_letter, UPPERCASE_LETTER);
