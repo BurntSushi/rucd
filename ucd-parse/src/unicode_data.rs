@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::fmt;
 use std::iter;
 use std::ops::Range;
@@ -16,13 +15,13 @@ use error::Error;
 /// for the
 /// [`UnicodeData.txt` file](http://www.unicode.org/reports/tr44/#UnicodeData.txt).
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct UnicodeData<'a> {
+pub struct UnicodeData {
     /// The codepoint corresponding to this row.
     pub codepoint: Codepoint,
     /// The name of this codepoint.
-    pub name: Cow<'a, str>,
+    pub name: String,
     /// The "general category" of this codepoint.
-    pub general_category: Cow<'a, str>,
+    pub general_category: String,
     /// The class of this codepoint used in the Canonical Ordering Algorithm.
     ///
     /// Note that some classes map to a particular symbol. See
@@ -32,7 +31,7 @@ pub struct UnicodeData<'a> {
     ///
     /// Possible values are listed in
     /// [UAX44, Table 13](http://www.unicode.org/reports/tr44/#Bidi_Class_Values).
-    pub bidi_class: Cow<'a, str>,
+    pub bidi_class: String,
     /// The decomposition mapping for this codepoint. This includes its
     /// formatting tag (if present).
     pub decomposition: UnicodeDataDecomposition,
@@ -53,10 +52,10 @@ pub struct UnicodeData<'a> {
     /// The "old" Unicode 1.0 or ISO 6429 name of this codepoint. Note that
     /// this field is empty unless it is significantly different from
     /// the `name` field.
-    pub unicode1_name: Cow<'a, str>,
+    pub unicode1_name: String,
     /// The ISO 10464 comment field. This no longer contains any non-NULL
     /// values.
-    pub iso_comment: Cow<'a, str>,
+    pub iso_comment: String,
     /// This codepoint's simple uppercase mapping, if it exists.
     pub simple_uppercase_mapping: Option<Codepoint>,
     /// This codepoint's simple lowercase mapping, if it exists.
@@ -65,43 +64,40 @@ pub struct UnicodeData<'a> {
     pub simple_titlecase_mapping: Option<Codepoint>,
 }
 
-impl UcdFile for UnicodeData<'static> {
+impl UcdFile for UnicodeData {
     fn relative_file_path() -> &'static Path {
         Path::new("UnicodeData.txt")
     }
 }
 
-impl UcdFileByCodepoint for UnicodeData<'static> {
+impl UcdFileByCodepoint for UnicodeData {
     fn codepoints(&self) -> CodepointIter {
         self.codepoint.into_iter()
     }
 }
 
-impl<'a> UnicodeData<'a> {
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> UnicodeData<'static> {
-        UnicodeData {
-            codepoint: self.codepoint,
-            name: Cow::Owned(self.name.into_owned()),
-            general_category: Cow::Owned(self.general_category.into_owned()),
-            canonical_combining_class: self.canonical_combining_class,
-            bidi_class: Cow::Owned(self.bidi_class.into_owned()),
-            decomposition: self.decomposition,
-            numeric_type_decimal: self.numeric_type_decimal,
-            numeric_type_digit: self.numeric_type_digit,
-            numeric_type_numeric: self.numeric_type_numeric,
-            bidi_mirrored: self.bidi_mirrored,
-            unicode1_name: Cow::Owned(self.unicode1_name.into_owned()),
-            iso_comment: Cow::Owned(self.iso_comment.into_owned()),
-            simple_uppercase_mapping: self.simple_uppercase_mapping,
-            simple_lowercase_mapping: self.simple_lowercase_mapping,
-            simple_titlecase_mapping: self.simple_titlecase_mapping,
-        }
+impl UnicodeData {
+    /// Returns true if and only if this record corresponds to the start of a
+    /// range.
+    pub fn is_range_start(&self) -> bool {
+        self.name.starts_with('<')
+        && self.name.ends_with('>')
+        && self.name.contains("First")
     }
 
-    /// Parse a single line.
-    pub fn parse_line(line: &'a str) -> Result<UnicodeData<'a>, Error> {
+    /// Returns true if and only if this record corresponds to the end of a
+    /// range.
+    pub fn is_range_end(&self) -> bool {
+        self.name.starts_with('<')
+        && self.name.ends_with('>')
+        && self.name.contains("Last")
+    }
+}
+
+impl FromStr for UnicodeData {
+    type Err = Error;
+
+    fn from_str(line: &str) -> Result<UnicodeData, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)
@@ -133,15 +129,15 @@ impl<'a> UnicodeData<'a> {
         let mut data = UnicodeData::default();
 
         data.codepoint = capget(1).parse()?;
-        data.name = Cow::Borrowed(capget(2));
-        data.general_category = Cow::Borrowed(capget(3));
+        data.name = capget(2).to_string();
+        data.general_category = capget(3).to_string();
         data.canonical_combining_class = match capget(4).parse() {
             Ok(n) => n,
             Err(err) => return err!(
                 "failed to parse canonical combining class '{}': {}",
                 capget(4), err),
         };
-        data.bidi_class = Cow::Borrowed(capget(5));
+        data.bidi_class = capget(5).to_string();
         if !caps[6].is_empty() {
             data.decomposition = caps[6].parse()?;
         } else {
@@ -167,8 +163,8 @@ impl<'a> UnicodeData<'a> {
             data.numeric_type_numeric = Some(capget(9).parse()?);
         }
         data.bidi_mirrored = capget(10) == "Y";
-        data.unicode1_name = Cow::Borrowed(capget(11));
-        data.iso_comment = Cow::Borrowed(capget(12));
+        data.unicode1_name = capget(11).to_string();
+        data.iso_comment = capget(12).to_string();
         if !capget(13).is_empty() {
             data.simple_uppercase_mapping = Some(capget(13).parse()?);
         }
@@ -180,33 +176,9 @@ impl<'a> UnicodeData<'a> {
         }
         Ok(data)
     }
-
-    /// Returns true if and only if this record corresponds to the start of a
-    /// range.
-    pub fn is_range_start(&self) -> bool {
-        self.name.starts_with('<')
-        && self.name.ends_with('>')
-        && self.name.contains("First")
-    }
-
-    /// Returns true if and only if this record corresponds to the end of a
-    /// range.
-    pub fn is_range_end(&self) -> bool {
-        self.name.starts_with('<')
-        && self.name.ends_with('>')
-        && self.name.contains("Last")
-    }
 }
 
-impl FromStr for UnicodeData<'static> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<UnicodeData<'static>, Error> {
-        UnicodeData::parse_line(s).map(|x| x.into_owned())
-    }
-}
-
-impl<'a> fmt::Display for UnicodeData<'a> {
+impl fmt::Display for UnicodeData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{};", self.codepoint)?;
         write!(f, "{};", self.name)?;
@@ -537,10 +509,10 @@ struct CodepointRange {
     range: Range<u32>,
     /// The start record. All subsequent records in this range are generated
     /// by cloning this and updating the codepoint/name.
-    start_record: UnicodeData<'static>,
+    start_record: UnicodeData,
 }
 
-impl<I: Iterator<Item=UnicodeData<'static>>> UnicodeDataExpander<I> {
+impl<I: Iterator<Item=UnicodeData>> UnicodeDataExpander<I> {
     /// Create a new iterator that expands pairs of `UnicodeData` range
     /// records. All other records are passed through as-is.
     pub fn new<T>(it: T) -> UnicodeDataExpander<I>
@@ -556,12 +528,12 @@ impl<I: Iterator<Item=UnicodeData<'static>>> UnicodeDataExpander<I> {
     }
 }
 
-impl<I: Iterator<Item=UnicodeData<'static>>>
+impl<I: Iterator<Item=UnicodeData>>
     Iterator for UnicodeDataExpander<I>
 {
-    type Item = UnicodeData<'static>;
+    type Item = UnicodeData;
 
-    fn next(&mut self) -> Option<UnicodeData<'static>> {
+    fn next(&mut self) -> Option<UnicodeData> {
         if let Some(udata) = self.range.next() {
             return Some(udata);
         }
@@ -584,16 +556,16 @@ impl<I: Iterator<Item=UnicodeData<'static>>>
 }
 
 impl Iterator for CodepointRange {
-    type Item = UnicodeData<'static>;
+    type Item = UnicodeData;
 
-    fn next(&mut self) -> Option<UnicodeData<'static>> {
+    fn next(&mut self) -> Option<UnicodeData> {
         let cp = match self.range.next() {
             None => return None,
             Some(cp) => cp,
         };
         Some(UnicodeData {
             codepoint: Codepoint::from_u32(cp).unwrap(),
-            name: Cow::Borrowed(""),
+            name: "".to_string(),
             ..self.start_record.clone()
         })
     }
@@ -601,8 +573,6 @@ impl Iterator for CodepointRange {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Cow;
-
     use common::Codepoint;
 
     use super::{
@@ -614,16 +584,20 @@ mod tests {
         Codepoint::from_u32(n).unwrap()
     }
 
+    fn s(string: &str) -> String {
+        string.to_string()
+    }
+
     #[test]
     fn parse1() {
         let line = "249D;PARENTHESIZED LATIN SMALL LETTER B;So;0;L;<compat> 0028 0062 0029;;;;N;;;;;\n";
         let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x249d),
-            name: Cow::Borrowed("PARENTHESIZED LATIN SMALL LETTER B"),
-            general_category: Cow::Borrowed("So"),
+            name: s("PARENTHESIZED LATIN SMALL LETTER B"),
+            general_category: s("So"),
             canonical_combining_class: 0,
-            bidi_class: Cow::Borrowed("L"),
+            bidi_class: s("L"),
             decomposition: UnicodeDataDecomposition::new(
                 Some(UnicodeDataDecompositionTag::Compat),
                 &[codepoint(0x28), codepoint(0x62), codepoint(0x29)],
@@ -632,8 +606,8 @@ mod tests {
             numeric_type_digit: None,
             numeric_type_numeric: None,
             bidi_mirrored: false,
-            unicode1_name: Cow::Borrowed(""),
-            iso_comment: Cow::Borrowed(""),
+            unicode1_name: s(""),
+            iso_comment: s(""),
             simple_uppercase_mapping: None,
             simple_lowercase_mapping: None,
             simple_titlecase_mapping: None,
@@ -646,18 +620,18 @@ mod tests {
         let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x000D),
-            name: Cow::Borrowed("<control>"),
-            general_category: Cow::Borrowed("Cc"),
+            name: s("<control>"),
+            general_category: s("Cc"),
             canonical_combining_class: 0,
-            bidi_class: Cow::Borrowed("B"),
+            bidi_class: s("B"),
             decomposition: UnicodeDataDecomposition::new(
                 None, &[codepoint(0x000D)]).unwrap(),
             numeric_type_decimal: None,
             numeric_type_digit: None,
             numeric_type_numeric: None,
             bidi_mirrored: false,
-            unicode1_name: Cow::Borrowed("CARRIAGE RETURN (CR)"),
-            iso_comment: Cow::Borrowed(""),
+            unicode1_name: s("CARRIAGE RETURN (CR)"),
+            iso_comment: s(""),
             simple_uppercase_mapping: None,
             simple_lowercase_mapping: None,
             simple_titlecase_mapping: None,
@@ -670,10 +644,10 @@ mod tests {
         let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x00BC),
-            name: Cow::Borrowed("VULGAR FRACTION ONE QUARTER"),
-            general_category: Cow::Borrowed("No"),
+            name: s("VULGAR FRACTION ONE QUARTER"),
+            general_category: s("No"),
             canonical_combining_class: 0,
-            bidi_class: Cow::Borrowed("ON"),
+            bidi_class: s("ON"),
             decomposition: UnicodeDataDecomposition::new(
                 Some(UnicodeDataDecompositionTag::Fraction),
                 &[codepoint(0x31), codepoint(0x2044), codepoint(0x34)],
@@ -682,8 +656,8 @@ mod tests {
             numeric_type_digit: None,
             numeric_type_numeric: Some(UnicodeDataNumeric::Rational(1, 4)),
             bidi_mirrored: false,
-            unicode1_name: Cow::Borrowed("FRACTION ONE QUARTER"),
-            iso_comment: Cow::Borrowed(""),
+            unicode1_name: s("FRACTION ONE QUARTER"),
+            iso_comment: s(""),
             simple_uppercase_mapping: None,
             simple_lowercase_mapping: None,
             simple_titlecase_mapping: None,
@@ -696,18 +670,18 @@ mod tests {
         let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x0041),
-            name: Cow::Borrowed("LATIN CAPITAL LETTER A"),
-            general_category: Cow::Borrowed("Lu"),
+            name: s("LATIN CAPITAL LETTER A"),
+            general_category: s("Lu"),
             canonical_combining_class: 0,
-            bidi_class: Cow::Borrowed("L"),
+            bidi_class: s("L"),
             decomposition: UnicodeDataDecomposition::new(
                 None, &[codepoint(0x0041)]).unwrap(),
             numeric_type_decimal: None,
             numeric_type_digit: None,
             numeric_type_numeric: None,
             bidi_mirrored: false,
-            unicode1_name: Cow::Borrowed(""),
-            iso_comment: Cow::Borrowed(""),
+            unicode1_name: s(""),
+            iso_comment: s(""),
             simple_uppercase_mapping: None,
             simple_lowercase_mapping: Some(codepoint(0x0061)),
             simple_titlecase_mapping: None,
@@ -720,18 +694,18 @@ mod tests {
         let data: UnicodeData = line.parse().unwrap();
         assert_eq!(data, UnicodeData {
             codepoint: codepoint(0x0F33),
-            name: Cow::Borrowed("TIBETAN DIGIT HALF ZERO"),
-            general_category: Cow::Borrowed("No"),
+            name: s("TIBETAN DIGIT HALF ZERO"),
+            general_category: s("No"),
             canonical_combining_class: 0,
-            bidi_class: Cow::Borrowed("L"),
+            bidi_class: s("L"),
             decomposition: UnicodeDataDecomposition::new(
                 None, &[codepoint(0x0F33)]).unwrap(),
             numeric_type_decimal: None,
             numeric_type_digit: None,
             numeric_type_numeric: Some(UnicodeDataNumeric::Rational(-1, 2)),
             bidi_mirrored: false,
-            unicode1_name: Cow::Borrowed(""),
-            iso_comment: Cow::Borrowed(""),
+            unicode1_name: s(""),
+            iso_comment: s(""),
             simple_uppercase_mapping: None,
             simple_lowercase_mapping: None,
             simple_titlecase_mapping: None,

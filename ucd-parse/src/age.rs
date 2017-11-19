@@ -1,5 +1,4 @@
 
-use std::borrow::Cow;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -11,50 +10,34 @@ use error::Error;
 
 /// A single row in the `DerivedAge.txt` file.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Age<'a> {
+pub struct Age {
     /// The codepoint or codepoint range for this entry.
     codepoints: Codepoints,
     /// The age assigned to the codepoints in this entry.
-    age: Cow<'a, str>,
+    age: String,
 }
 
-impl UcdFile for Age<'static> {
+impl UcdFile for Age {
     fn relative_file_path() -> &'static Path {
         Path::new("DerivedAge.txt")
     }
 }
 
-impl UcdFileByCodepoint for Age<'static> {
+impl UcdFileByCodepoint for Age {
     fn codepoints(&self) -> CodepointIter {
         self.codepoints.into_iter()
     }
 }
 
-impl<'a> Age<'a> {
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> Age<'static> {
-        Age {
-            codepoints: self.codepoints,
-            age: Cow::Owned(self.age.into_owned()),
-        }
-    }
+impl FromStr for Age {
+    type Err = Error;
 
-    /// Parse a single line.
-    pub fn parse_line(line: &'a str) -> Result<Age<'a>, Error> {
+    fn from_str(line: &str) -> Result<Age, Error> {
         let (codepoints, script) = parse_codepoint_association(line)?;
         Ok(Age {
             codepoints: codepoints,
-            age: Cow::Borrowed(script),
+            age: script.to_string(),
         })
-    }
-}
-
-impl FromStr for Age<'static> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Age<'static>, Error> {
-        Age::parse_line(s).map(|x| x.into_owned())
     }
 }
 

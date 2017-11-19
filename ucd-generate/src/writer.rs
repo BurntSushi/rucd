@@ -320,6 +320,34 @@ impl Writer {
         Ok(())
     }
 
+    /// Write a map that associates strings to strings.
+    ///
+    /// The only supported output format is a sorted slice, which can be
+    /// binary searched.
+    pub fn string_to_string(
+        &mut self,
+        name: &str,
+        map: &BTreeMap<String, String>,
+    ) -> Result<()> {
+        if self.opts.fst_dir.is_some() {
+            return err!("cannot emit string->string map as an FST");
+        }
+
+        self.header()?;
+        self.separator()?;
+
+        let name = rust_const_name(name);
+        writeln!(
+            self.wtr,
+            "pub const {}: &'static [(&'static str, &'static str)] = &[",
+            name)?;
+        for (k, v) in map {
+            self.wtr.write_str(&format!("({:?}, {:?}), ", k, v))?;
+        }
+        writeln!(self.wtr, "];")?;
+        Ok(())
+    }
+
     /// Write a map that associates codepoints to strings.
     ///
     /// When the output format is an FST, then the FST map emitted is from

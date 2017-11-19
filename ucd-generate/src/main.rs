@@ -59,6 +59,9 @@ fn run() -> Result<()> {
         ("names", Some(m)) => {
             names::command(ArgMatches::new(m))
         }
+        ("property-names", Some(m)) => {
+            cmd_property_names(ArgMatches::new(m))
+        }
         ("test-unicode-data", Some(m)) => {
             cmd_test_unicode_data(ArgMatches::new(m))
         }
@@ -69,6 +72,17 @@ fn run() -> Result<()> {
         }
         (unknown, _) => err!("unrecognized command: {}", unknown),
     }
+}
+
+fn cmd_property_names(args: ArgMatches) -> Result<()> {
+    use util::PropertyNames;
+
+    let dir = args.ucd_dir()?;
+    let names = PropertyNames::from_ucd_dir(&dir)?;
+
+    let mut wtr = args.writer("property_names")?;
+    wtr.string_to_string(args.name(), &names.0)?;
+    Ok(())
 }
 
 fn cmd_test_unicode_data(args: ArgMatches) -> Result<()> {

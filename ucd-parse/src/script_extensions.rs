@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -10,53 +9,34 @@ use error::Error;
 
 /// A single row in the `ScriptExtensions.txt` file.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct ScriptExtension<'a> {
+pub struct ScriptExtension {
     /// The codepoint or codepoint range for this entry.
     codepoints: Codepoints,
     /// The script extension names assigned to the codepoints in this entry.
-    scripts: Vec<Cow<'a, str>>,
+    scripts: Vec<String>,
 }
 
-impl UcdFile for ScriptExtension<'static> {
+impl UcdFile for ScriptExtension {
     fn relative_file_path() -> &'static Path {
         Path::new("ScriptExtensions.txt")
     }
 }
 
-impl UcdFileByCodepoint for ScriptExtension<'static> {
+impl UcdFileByCodepoint for ScriptExtension {
     fn codepoints(&self) -> CodepointIter {
         self.codepoints.into_iter()
     }
 }
 
-impl<'a> ScriptExtension<'a> {
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> ScriptExtension<'static> {
-        let scripts = self.scripts.into_iter()
-            .map(|x| Cow::Owned(x.into_owned()))
-            .collect();
-        ScriptExtension {
-            codepoints: self.codepoints,
-            scripts: scripts,
-        }
-    }
+impl FromStr for ScriptExtension {
+    type Err = Error;
 
-    /// Parse a single line.
-    pub fn parse_line(line: &'a str) -> Result<ScriptExtension<'a>, Error> {
+    fn from_str(line: &str) -> Result<ScriptExtension, Error> {
         let (codepoints, scripts) = parse_codepoint_association(line)?;
         Ok(ScriptExtension {
             codepoints: codepoints,
-            scripts: scripts.split_whitespace().map(Cow::Borrowed).collect(),
+            scripts: scripts.split_whitespace().map(str::to_string).collect(),
         })
-    }
-}
-
-impl FromStr for ScriptExtension<'static> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<ScriptExtension<'static>, Error> {
-        ScriptExtension::parse_line(s).map(|x| x.into_owned())
     }
 }
 

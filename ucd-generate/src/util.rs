@@ -12,7 +12,7 @@ use error::Result;
 ///
 /// All keys are normalized according to UAX44-LM3.
 #[derive(Clone, Debug)]
-pub struct PropertyNames(BTreeMap<String, String>);
+pub struct PropertyNames(pub BTreeMap<String, String>);
 
 impl PropertyNames {
     pub fn from_ucd_dir<P: AsRef<Path>>(ucd_dir: P) -> Result<PropertyNames> {
@@ -28,10 +28,10 @@ impl PropertyNames {
             };
 
             for alias in a.aliases {
-                map.insert(make_key(alias.into_owned()), canon.clone());
+                map.insert(make_key(alias), canon.clone());
             }
-            map.insert(make_key(a.abbreviation.into_owned()), canon.clone());
-            map.insert(make_key(a.long.into_owned()), canon);
+            map.insert(make_key(a.abbreviation), canon.clone());
+            map.insert(make_key(a.long), canon);
         }
         Ok(PropertyNames(map))
     }
@@ -54,8 +54,8 @@ impl PropertyNames {
 /// Property names and values are normalized according to UAX44-LM3.
 #[derive(Clone, Debug)]
 pub struct PropertyValues {
-    property: PropertyNames,
-    value: BTreeMap<String, BTreeMap<String, String>>,
+    pub property: PropertyNames,
+    pub value: BTreeMap<String, BTreeMap<String, String>>,
 }
 
 impl PropertyValues {
@@ -73,15 +73,17 @@ impl PropertyValues {
                 value
             };
 
-            let mut inner_map = outer_map.entry(prop).or_insert(BTreeMap::new());
+            let mut inner_map = outer_map
+                .entry(prop)
+                .or_insert(BTreeMap::new());
             if let Some(n) = a.numeric {
                 inner_map.insert(make_key(n.to_string()), canon.clone());
             }
             for alias in a.aliases {
-                inner_map.insert(make_key(alias.into_owned()), canon.clone());
+                inner_map.insert(make_key(alias), canon.clone());
             }
-            inner_map.insert(make_key(a.abbreviation.into_owned()), canon.clone());
-            inner_map.insert(make_key(a.long.into_owned()), canon);
+            inner_map.insert(make_key(a.abbreviation), canon.clone());
+            inner_map.insert(make_key(a.long), canon);
         }
         Ok(PropertyValues { property: props, value: outer_map })
     }

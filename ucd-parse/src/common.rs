@@ -98,6 +98,16 @@ pub fn parse_codepoint_association<'a>(
     Ok((caps["codepoints"].parse()?, property))
 }
 
+/// A helper function for parsing a sequence of space separated codepoints.
+/// The sequence is permitted to be empty.
+pub fn parse_codepoint_sequence(s: &str) -> Result<Vec<Codepoint>, Error> {
+    let mut cps = vec![];
+    for cp in s.trim().split_whitespace() {
+        cps.push(cp.parse()?);
+    }
+    Ok(cps)
+}
+
 /// A trait that describes a single UCD file.
 pub trait UcdFile:
     Clone + fmt::Debug + Default + Eq + FromStr<Err=Error> + PartialEq

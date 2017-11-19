@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -9,45 +8,31 @@ use error::Error;
 
 /// A single row in the `PropertyValueAliases.txt` file.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct PropertyValueAlias<'a> {
+pub struct PropertyValueAlias {
     /// The property name for which this value alias applies.
-    pub property: Cow<'a, str>,
+    pub property: String,
     /// A numeric abbreviation for this property value, if present. (This is
     /// seemingly only present for the `ccc`/`Canonical_Combining_Class`
     /// property.)
     pub numeric: Option<u8>,
     /// An abbreviation for this property value.
-    pub abbreviation: Cow<'a, str>,
+    pub abbreviation: String,
     /// The "long" form of this property value.
-    pub long: Cow<'a, str>,
+    pub long: String,
     /// Additional value aliases (if present).
-    pub aliases: Vec<Cow<'a, str>>,
+    pub aliases: Vec<String>,
 }
 
-impl UcdFile for PropertyValueAlias<'static> {
+impl UcdFile for PropertyValueAlias {
     fn relative_file_path() -> &'static Path {
         Path::new("PropertyValueAliases.txt")
     }
 }
 
-impl<'a> PropertyValueAlias<'a> {
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> PropertyValueAlias<'static> {
-        let aliases = self.aliases.into_iter()
-            .map(|x| Cow::Owned(x.into_owned()))
-            .collect();
-        PropertyValueAlias {
-            property: Cow::Owned(self.property.into_owned()),
-            numeric: self.numeric,
-            abbreviation: Cow::Owned(self.abbreviation.into_owned()),
-            long: Cow::Owned(self.long.into_owned()),
-            aliases: aliases,
-        }
-    }
+impl FromStr for PropertyValueAlias {
+    type Err = Error;
 
-    /// Parse a single line.
-    pub fn parse_line(line: &'a str) -> Result<PropertyValueAlias<'a>, Error> {
+    fn from_str(line: &str) -> Result<PropertyValueAlias, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)
@@ -86,10 +71,10 @@ impl<'a> PropertyValueAlias<'a> {
             let abbrev = caps.name("abbrev").unwrap().as_str();
             let long = caps.name("long").unwrap().as_str();
             return Ok(PropertyValueAlias {
-                property: Cow::Borrowed(&line[0..3]),
+                property: line[0..3].to_string(),
                 numeric: Some(n),
-                abbreviation: Cow::Borrowed(abbrev),
-                long: Cow::Borrowed(long),
+                abbreviation: abbrev.to_string(),
+                long: long.to_string(),
                 aliases: vec![],
             });
         }
@@ -106,24 +91,16 @@ impl<'a> PropertyValueAlias<'a> {
                     // This starts a comment, so stop reading.
                     break;
                 }
-                aliases.push(Cow::Borrowed(alias));
+                aliases.push(alias.to_string());
             }
         }
         Ok(PropertyValueAlias {
-            property: Cow::Borrowed(caps.name("prop").unwrap().as_str()),
+            property: caps.name("prop").unwrap().as_str().to_string(),
             numeric: None,
-            abbreviation: Cow::Borrowed(caps.name("abbrev").unwrap().as_str()),
-            long: Cow::Borrowed(caps.name("long").unwrap().as_str()),
+            abbreviation: caps.name("abbrev").unwrap().as_str().to_string(),
+            long: caps.name("long").unwrap().as_str().to_string(),
             aliases: aliases,
         })
-    }
-}
-
-impl FromStr for PropertyValueAlias<'static> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<PropertyValueAlias<'static>, Error> {
-        PropertyValueAlias::parse_line(s).map(|x| x.into_owned())
     }
 }
 

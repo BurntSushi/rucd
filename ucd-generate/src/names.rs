@@ -78,8 +78,8 @@ impl NameTag {
 /// The return value maps each name to its corresponding codepoint, along with
 /// a tag associated with how that mapping was generated.
 fn names_to_codepoint(
-    data: &BTreeMap<Codepoint, UnicodeData<'static>>,
-    aliases: &Option<BTreeMap<Codepoint, Vec<NameAlias<'static>>>>,
+    data: &BTreeMap<Codepoint, UnicodeData>,
+    aliases: &Option<BTreeMap<Codepoint, Vec<NameAlias>>>,
     ideograph: bool,
     hangul: bool,
 ) -> BTreeMap<String, (NameTag, u32)> {
@@ -98,7 +98,7 @@ fn names_to_codepoint(
         for (cp, aliases) in alias_map {
             for name_alias in aliases {
                 let v = (NameTag::Alias, cp.value());
-                map.insert(name_alias.alias.clone().into_owned(), v);
+                map.insert(name_alias.alias.clone(), v);
             }
         }
     }
@@ -108,7 +108,7 @@ fn names_to_codepoint(
             || (datum.name.starts_with('<') && datum.name.ends_with('>'));
         if !isnull {
             let v = (NameTag::Explicit, cp.value());
-            map.insert(datum.name.clone().into_owned(), v);
+            map.insert(datum.name.clone(), v);
         }
     }
     if ideograph {

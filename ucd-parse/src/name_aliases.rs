@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -12,40 +11,31 @@ use error::Error;
 /// Note that there are multiple rows for some codepoint. Each row provides a
 /// new alias.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct NameAlias<'a> {
+pub struct NameAlias {
     /// The codepoint corresponding to this row.
     pub codepoint: Codepoint,
     /// The alias.
-    pub alias: Cow<'a, str>,
+    pub alias: String,
     /// The label of this alias.
     pub label: NameAliasLabel,
 }
 
-impl UcdFile for NameAlias<'static> {
+impl UcdFile for NameAlias {
     fn relative_file_path() -> &'static Path {
         Path::new("NameAliases.txt")
     }
 }
 
-impl UcdFileByCodepoint for NameAlias<'static> {
+impl UcdFileByCodepoint for NameAlias {
     fn codepoints(&self) -> CodepointIter {
         self.codepoint.into_iter()
     }
 }
 
-impl<'a> NameAlias<'a> {
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> NameAlias<'static> {
-        NameAlias {
-            codepoint: self.codepoint,
-            alias: Cow::Owned(self.alias.into_owned()),
-            label: self.label,
-        }
-    }
+impl FromStr for NameAlias {
+    type Err = Error;
 
-    /// Parse a single line.
-    pub fn parse_line(line: &'a str) -> Result<NameAlias<'a>, Error> {
+    fn from_str(line: &str) -> Result<NameAlias, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)
@@ -65,17 +55,9 @@ impl<'a> NameAlias<'a> {
         };
         Ok(NameAlias {
             codepoint: caps["codepoint"].parse()?,
-            alias: Cow::Borrowed(caps.name("alias").unwrap().as_str()),
+            alias: caps.name("alias").unwrap().as_str().to_string(),
             label: caps["label"].parse()?,
         })
-    }
-}
-
-impl FromStr for NameAlias<'static> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<NameAlias<'static>, Error> {
-        NameAlias::parse_line(s).map(|x| x.into_owned())
     }
 }
 

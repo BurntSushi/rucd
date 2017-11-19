@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -11,38 +10,30 @@ use error::Error;
 ///
 /// The `Jamo.txt` file defines the `Jamo_Short_Name` property.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct JamoShortName<'a> {
+pub struct JamoShortName {
     /// The codepoint corresponding to this row.
     pub codepoint: Codepoint,
     /// The actual "Jamo Short Name." This string contains at most 3 bytes and
     /// may be empty.
-    pub name: Cow<'a, str>,
+    pub name: String,
 }
 
-impl UcdFile for JamoShortName<'static> {
+impl UcdFile for JamoShortName {
     fn relative_file_path() -> &'static Path {
         Path::new("Jamo.txt")
     }
 }
 
-impl UcdFileByCodepoint for JamoShortName<'static> {
+impl UcdFileByCodepoint for JamoShortName {
     fn codepoints(&self) -> CodepointIter {
         self.codepoint.into_iter()
     }
 }
 
-impl<'a> JamoShortName<'a> {
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> JamoShortName<'static> {
-        JamoShortName {
-            codepoint: self.codepoint,
-            name: Cow::Owned(self.name.into_owned()),
-        }
-    }
+impl FromStr for JamoShortName {
+    type Err = Error;
 
-    /// Parse a single line.
-    pub fn parse_line(line: &'a str) -> Result<JamoShortName<'a>, Error> {
+    fn from_str(line: &str) -> Result<JamoShortName, Error> {
         lazy_static! {
             static ref PARTS: Regex = Regex::new(
                 r"(?x)
@@ -60,16 +51,8 @@ impl<'a> JamoShortName<'a> {
         };
         Ok(JamoShortName {
             codepoint: caps["codepoint"].parse()?,
-            name: Cow::Borrowed(caps.name("name").unwrap().as_str()),
+            name: caps.name("name").unwrap().as_str().to_string(),
         })
-    }
-}
-
-impl FromStr for JamoShortName<'static> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<JamoShortName<'static>, Error> {
-        JamoShortName::parse_line(s).map(|x| x.into_owned())
     }
 }
 

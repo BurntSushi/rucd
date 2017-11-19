@@ -65,6 +65,11 @@ confirm that they are identical. This is a sanity test on the UnicodeData.txt
 parser.
 ";
 
+const ABOUT_PROPERTY_NAMES: &'static str = "\
+property-names emits a table of all property aliases that map to a canonical
+property name.
+";
+
 /// Build a clap application.
 pub fn app() -> App<'static, 'static> {
     // Various common flags and arguments.
@@ -164,6 +169,14 @@ pub fn app() -> App<'static, 'static> {
         .arg(Arg::with_name("normalize")
             .long("normalize")
             .help("Normalize all character names according to UAX44-LM2."));
+    let cmd_property_names = SubCommand::with_name("property-names")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create the canonical property name table.")
+        .before_help(ABOUT_PROPERTY_NAMES)
+        .arg(ucd_dir.clone())
+        .arg(flag_name("PROPERTY_NAMES"));
 
     let cmd_test_unicode_data = SubCommand::with_name("test-unicode-data")
         .author(crate_authors!())
@@ -184,5 +197,6 @@ pub fn app() -> App<'static, 'static> {
         .subcommand(cmd_general_category)
         .subcommand(cmd_jamo_short_name)
         .subcommand(cmd_names)
+        .subcommand(cmd_property_names)
         .subcommand(cmd_test_unicode_data)
 }

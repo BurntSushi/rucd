@@ -53,5 +53,8 @@ pub fn codepoint_name(cp: Codepoint) -> Option<String> {
     if let Some(name) = ucd_util::ideograph_name(cp.value()) {
         return Some(name);
     }
-    NAMES_WITH_ALIASES.get(&cp).and_then(|x| x.one_name()).map(|x| x.to_owned())
+    NAMES_WITH_ALIASES
+        .get(&cp)
+        .and_then(|x| x.one_name())
+        .map(|x| x.to_owned())
 }

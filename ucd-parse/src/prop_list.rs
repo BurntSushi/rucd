@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -13,50 +12,34 @@ use error::Error;
 /// The `PropList.txt` file is the source of truth on several Unicode
 /// properties.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Property<'a> {
+pub struct Property {
     /// The codepoint or codepoint range for this entry.
     codepoints: Codepoints,
     /// The property name assigned to the codepoints in this entry.
-    property: Cow<'a, str>,
+    property: String,
 }
 
-impl UcdFile for Property<'static> {
+impl UcdFile for Property {
     fn relative_file_path() -> &'static Path {
         Path::new("PropList.txt")
     }
 }
 
-impl UcdFileByCodepoint for Property<'static> {
+impl UcdFileByCodepoint for Property {
     fn codepoints(&self) -> CodepointIter {
         self.codepoints.into_iter()
     }
 }
 
-impl<'a> Property<'a> {
-    /// Convert this record into an owned value such that it no longer
-    /// borrows from the original line that it was parsed from.
-    pub fn into_owned(self) -> Property<'static> {
-        Property {
-            codepoints: self.codepoints,
-            property: Cow::Owned(self.property.into_owned()),
-        }
-    }
+impl FromStr for Property {
+    type Err = Error;
 
-    /// Parse a single line.
-    pub fn parse_line(line: &'a str) -> Result<Property<'a>, Error> {
+    fn from_str(line: &str) -> Result<Property, Error> {
         let (codepoints, property) = parse_codepoint_association(line)?;
         Ok(Property {
             codepoints: codepoints,
-            property: Cow::Borrowed(property),
+            property: property.to_string(),
         })
-    }
-}
-
-impl FromStr for Property<'static> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Property<'static>, Error> {
-        Property::parse_line(s).map(|x| x.into_owned())
     }
 }
 
