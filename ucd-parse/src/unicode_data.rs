@@ -7,14 +7,14 @@ use std::str::FromStr;
 
 use regex::Regex;
 
-use common::{UcdFile, UcdFileByCodepoint, Codepoint};
+use common::{UcdFile, UcdFileByCodepoint, Codepoint, CodepointIter};
 use error::Error;
 
 /// Represents a single row in the `UnicodeData.txt` file.
 ///
 /// These fields were taken from UAX44, Table 9, as part of the documentation
-/// for the `UnicodeData.txt` file:
-/// http://www.unicode.org/reports/tr44/#UnicodeData.txt
+/// for the
+/// [`UnicodeData.txt` file](http://www.unicode.org/reports/tr44/#UnicodeData.txt).
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct UnicodeData<'a> {
     /// The codepoint corresponding to this row.
@@ -25,13 +25,13 @@ pub struct UnicodeData<'a> {
     pub general_category: Cow<'a, str>,
     /// The class of this codepoint used in the Canonical Ordering Algorithm.
     ///
-    /// Note that some classes map to a particular symbol. See UAX44, Table 15:
-    /// http://www.unicode.org/reports/tr44/#Canonical_Combining_Class_Values
+    /// Note that some classes map to a particular symbol. See
+    /// [UAX44, Table 15](http://www.unicode.org/reports/tr44/#Canonical_Combining_Class_Values).
     pub canonical_combining_class: u8,
     /// The bidirectional class of this codepoint.
     ///
-    /// Possible values are listed in UAX44, Table 13:
-    /// http://www.unicode.org/reports/tr44/#Bidi_Class_Values
+    /// Possible values are listed in
+    /// [UAX44, Table 13](http://www.unicode.org/reports/tr44/#Bidi_Class_Values).
     pub bidi_class: Cow<'a, str>,
     /// The decomposition mapping for this codepoint. This includes its
     /// formatting tag (if present).
@@ -72,8 +72,8 @@ impl UcdFile for UnicodeData<'static> {
 }
 
 impl UcdFileByCodepoint for UnicodeData<'static> {
-    fn codepoint(&self) -> Codepoint {
-        self.codepoint
+    fn codepoints(&self) -> CodepointIter {
+        self.codepoint.into_iter()
     }
 }
 
@@ -360,8 +360,8 @@ impl fmt::Display for UnicodeDataDecomposition {
 
 /// The formatting tag on a decomposition mapping.
 ///
-/// This is taken from UAX44, Table 14:
-/// http://www.unicode.org/reports/tr44/#Character_Decomposition_Mappings
+/// This is taken from
+/// [UAX44, Table 14](http://www.unicode.org/reports/tr44/#Character_Decomposition_Mappings).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum UnicodeDataDecompositionTag {
     /// <font>

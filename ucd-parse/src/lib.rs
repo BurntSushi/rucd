@@ -14,10 +14,15 @@ pub use common::{
 };
 pub use error::{Error, ErrorKind};
 
+pub use age::Age;
+pub use core_properties::CoreProperty;
 pub use jamo_short_name::JamoShortName;
 pub use name_aliases::{NameAlias, NameAliasLabel};
+pub use prop_list::Property;
 pub use property_aliases::PropertyAlias;
 pub use property_value_aliases::PropertyValueAlias;
+pub use script_extensions::ScriptExtension;
+pub use scripts::Script;
 pub use unicode_data::{
     UnicodeData, UnicodeDataNumeric,
     UnicodeDataDecomposition, UnicodeDataDecompositionTag,
@@ -33,8 +38,13 @@ macro_rules! err {
 mod common;
 mod error;
 
+mod age;
+mod core_properties;
 mod jamo_short_name;
 mod name_aliases;
+mod prop_list;
 mod property_aliases;
 mod property_value_aliases;
+mod script_extensions;
+mod scripts;
 mod unicode_data;

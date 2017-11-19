@@ -56,7 +56,7 @@ impl<'a> PropertyAlias<'a> {
 
         let caps = match PARTS.captures(line.trim()) {
             Some(caps) => caps,
-            None => return err!("invalid PropertyAliases line"),
+            None => return err!("invalid PropertyAliases line: '{}'", line),
         };
         let mut aliases = vec![];
         if let Some(m) = caps.name("aliases") {

@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use regex::Regex;
 
-use common::{UcdFile, UcdFileByCodepoint, Codepoint};
+use common::{UcdFile, UcdFileByCodepoint, Codepoint, CodepointIter};
 use error::Error;
 
 /// A single row in the `NameAliases.txt` file.
@@ -28,8 +28,8 @@ impl UcdFile for NameAlias<'static> {
 }
 
 impl UcdFileByCodepoint for NameAlias<'static> {
-    fn codepoint(&self) -> Codepoint {
-        self.codepoint
+    fn codepoints(&self) -> CodepointIter {
+        self.codepoint.into_iter()
     }
 }
 
