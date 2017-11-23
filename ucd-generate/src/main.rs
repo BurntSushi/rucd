@@ -62,6 +62,9 @@ fn run() -> Result<()> {
         ("property-names", Some(m)) => {
             cmd_property_names(ArgMatches::new(m))
         }
+        ("property-values", Some(m)) => {
+            cmd_property_values(ArgMatches::new(m))
+        }
         ("test-unicode-data", Some(m)) => {
             cmd_test_unicode_data(ArgMatches::new(m))
         }
@@ -82,6 +85,17 @@ fn cmd_property_names(args: ArgMatches) -> Result<()> {
 
     let mut wtr = args.writer("property_names")?;
     wtr.string_to_string(args.name(), &names.0)?;
+    Ok(())
+}
+
+fn cmd_property_values(args: ArgMatches) -> Result<()> {
+    use util::PropertyValues;
+
+    let dir = args.ucd_dir()?;
+    let values = PropertyValues::from_ucd_dir(&dir)?;
+
+    let mut wtr = args.writer("property_values")?;
+    wtr.string_to_string_to_string(args.name(), &values.value)?;
     Ok(())
 }
 

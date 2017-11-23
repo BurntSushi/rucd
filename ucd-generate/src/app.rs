@@ -70,6 +70,11 @@ property-names emits a table of all property aliases that map to a canonical
 property name.
 ";
 
+const ABOUT_PROPERTY_VALUES: &'static str = "\
+property-values emits a table of all property values and their aliases that map
+to a canonical property value.
+";
+
 /// Build a clap application.
 pub fn app() -> App<'static, 'static> {
     // Various common flags and arguments.
@@ -177,6 +182,14 @@ pub fn app() -> App<'static, 'static> {
         .before_help(ABOUT_PROPERTY_NAMES)
         .arg(ucd_dir.clone())
         .arg(flag_name("PROPERTY_NAMES"));
+    let cmd_property_values = SubCommand::with_name("property-values")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create the canonical property value table.")
+        .before_help(ABOUT_PROPERTY_VALUES)
+        .arg(ucd_dir.clone())
+        .arg(flag_name("PROPERTY_VALUES"));
 
     let cmd_test_unicode_data = SubCommand::with_name("test-unicode-data")
         .author(crate_authors!())
@@ -198,5 +211,6 @@ pub fn app() -> App<'static, 'static> {
         .subcommand(cmd_jamo_short_name)
         .subcommand(cmd_names)
         .subcommand(cmd_property_names)
+        .subcommand(cmd_property_values)
         .subcommand(cmd_test_unicode_data)
 }
