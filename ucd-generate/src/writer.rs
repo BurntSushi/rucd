@@ -460,8 +460,12 @@ impl Writer {
             }
 
             self.wtr.write_str(&format!("({}, &[", kstr))?;
-            for v in vstrs {
-                self.wtr.write_str(&format!("{}, ", v))?;
+            if vstrs.len() == 1 {
+                self.wtr.write_str(&format!("{}", &vstrs[0]))?;
+            } else {
+                for v in vstrs {
+                    self.wtr.write_str(&format!("{}, ", v))?;
+                }
             }
             self.wtr.write_str("]), ")?;
         }

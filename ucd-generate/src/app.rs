@@ -75,6 +75,16 @@ property-values emits a table of all property values and their aliases that map
 to a canonical property value.
 ";
 
+const ABOUT_CASE_FOLDING: &'static str = "\
+case-folding emits a table of case folding mappings from codepoint to codepoint
+(for simple case folding) or codepoint to codepoints (for full case folding).
+When codepoints are mapped according to this table, then case differences
+(according to Unicode) are eliminated.
+
+By default, this emits the 'simple' mapping. The --full flag will emit the
+'full' mapping. There is no support for the 'special' mapping.
+";
+
 /// Build a clap application.
 pub fn app() -> App<'static, 'static> {
     // Various common flags and arguments.
@@ -190,6 +200,19 @@ pub fn app() -> App<'static, 'static> {
         .before_help(ABOUT_PROPERTY_VALUES)
         .arg(ucd_dir.clone())
         .arg(flag_name("PROPERTY_VALUES"));
+    let cmd_case_folding = SubCommand::with_name("case-folding")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create the case folding table.")
+        .before_help(ABOUT_CASE_FOLDING)
+        .arg(flag_name("CASE_FOLDING"))
+        .arg(ucd_dir.clone())
+        .arg(flag_fst_dir.clone())
+        .arg(flag_chars.clone())
+        .arg(Arg::with_name("full")
+             .long("full")
+             .help("Emit the full case folding mapping."));
 
     let cmd_test_unicode_data = SubCommand::with_name("test-unicode-data")
         .author(crate_authors!())
@@ -212,5 +235,6 @@ pub fn app() -> App<'static, 'static> {
         .subcommand(cmd_names)
         .subcommand(cmd_property_names)
         .subcommand(cmd_property_values)
+        .subcommand(cmd_case_folding)
         .subcommand(cmd_test_unicode_data)
 }

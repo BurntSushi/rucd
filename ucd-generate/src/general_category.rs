@@ -97,7 +97,7 @@ pub fn command(args: ArgMatches) -> Result<()> {
 
     let mut wtr = args.writer("general_category")?;
     if args.is_present("enum") {
-        wtr.ranges_to_enum("general_category", &bycat)?;
+        wtr.ranges_to_enum(args.name(), &bycat)?;
     } else {
         for (name, set) in bycat {
             wtr.ranges(&name, &set)?;

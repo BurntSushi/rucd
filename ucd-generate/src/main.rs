@@ -33,6 +33,7 @@ mod error;
 mod util;
 mod writer;
 
+mod case_folding;
 mod general_category;
 mod jamo_short_name;
 mod names;
@@ -64,6 +65,9 @@ fn run() -> Result<()> {
         }
         ("property-values", Some(m)) => {
             cmd_property_values(ArgMatches::new(m))
+        }
+        ("case-folding", Some(m)) => {
+            case_folding::command(ArgMatches::new(m))
         }
         ("test-unicode-data", Some(m)) => {
             cmd_test_unicode_data(ArgMatches::new(m))
