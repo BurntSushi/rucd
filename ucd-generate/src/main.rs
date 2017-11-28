@@ -66,7 +66,7 @@ fn run() -> Result<()> {
         ("property-values", Some(m)) => {
             cmd_property_values(ArgMatches::new(m))
         }
-        ("case-folding", Some(m)) => {
+        ("case-folding-simple", Some(m)) => {
             case_folding::command(ArgMatches::new(m))
         }
         ("test-unicode-data", Some(m)) => {

@@ -75,14 +75,10 @@ property-values emits a table of all property values and their aliases that map
 to a canonical property value.
 ";
 
-const ABOUT_CASE_FOLDING: &'static str = "\
-case-folding emits a table of case folding mappings from codepoint to codepoint
-(for simple case folding) or codepoint to codepoints (for full case folding).
-When codepoints are mapped according to this table, then case differences
-(according to Unicode) are eliminated.
-
-By default, this emits the 'simple' mapping. The --full flag will emit the
-'full' mapping. There is no support for the 'special' mapping.
+const ABOUT_CASE_FOLDING_SIMPLE: &'static str = "\
+case-folding emits a table of Simple case folding mappings from codepoint
+to codepoint. When codepoints are mapped according to this table, then case
+differences (according to Unicode) are eliminated.
 ";
 
 /// Build a clap application.
@@ -200,19 +196,23 @@ pub fn app() -> App<'static, 'static> {
         .before_help(ABOUT_PROPERTY_VALUES)
         .arg(ucd_dir.clone())
         .arg(flag_name("PROPERTY_VALUES"));
-    let cmd_case_folding = SubCommand::with_name("case-folding")
+    let cmd_case_folding_simple = SubCommand::with_name("case-folding-simple")
         .author(crate_authors!())
         .version(crate_version!())
         .template(TEMPLATE_SUB)
-        .about("Create the case folding table.")
-        .before_help(ABOUT_CASE_FOLDING)
-        .arg(flag_name("CASE_FOLDING"))
+        .about("Create a case folding table using the simple mapping.")
+        .before_help(ABOUT_CASE_FOLDING_SIMPLE)
+        .arg(flag_name("CASE_FOLDING_SIMPLE"))
         .arg(ucd_dir.clone())
         .arg(flag_fst_dir.clone())
         .arg(flag_chars.clone())
-        .arg(Arg::with_name("full")
-             .long("full")
-             .help("Emit the full case folding mapping."));
+        .arg(Arg::with_name("circular")
+             .long("circular")
+             .help("Emit a table where mappings are circular."))
+        .arg(Arg::with_name("all-pairs")
+             .long("all-pairs")
+             .help("Emit a table where each codepoint includes all possible \
+                    Simple mappings."));
 
     let cmd_test_unicode_data = SubCommand::with_name("test-unicode-data")
         .author(crate_authors!())
@@ -235,6 +235,6 @@ pub fn app() -> App<'static, 'static> {
         .subcommand(cmd_names)
         .subcommand(cmd_property_names)
         .subcommand(cmd_property_values)
-        .subcommand(cmd_case_folding)
+        .subcommand(cmd_case_folding_simple)
         .subcommand(cmd_test_unicode_data)
 }

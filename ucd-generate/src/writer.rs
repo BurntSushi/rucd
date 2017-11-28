@@ -423,6 +423,34 @@ impl Writer {
         Ok(())
     }
 
+    /// Write a map that associates codepoints with other codepoints, where
+    /// each codepoint can be associated with possibly many other codepoints.
+    ///
+    /// This does not support the FST format.
+    pub fn multi_codepoint_to_codepoint(
+        &mut self,
+        name: &str,
+        map: &BTreeMap<u32, BTreeSet<u32>>,
+    ) -> Result<()> {
+        if self.opts.fst_dir.is_some() {
+            return err!("cannot emit codepoint multimaps as an FST");
+        }
+
+        self.header()?;
+        self.separator()?;
+
+        let name = rust_const_name(name);
+        let mut table = vec![];
+        for (&k, vs) in map {
+            for &v in vs {
+                table.push((k, v));
+            }
+        }
+        self.ranges_slice(&name, &table)?;
+        self.wtr.flush()?;
+        Ok(())
+    }
+
     /// Write a map that associates codepoints with a sequence of other
     /// codepoints.
     ///
@@ -447,6 +475,8 @@ impl Writer {
             name, ty, ty)?;
     'LOOP:
         for (&k, vs) in map {
+            // Make sure both our keys and values can be represented in the
+            // user's chosen codepoint format.
             let kstr = match self.rust_codepoint(k) {
                 None => continue 'LOOP,
                 Some(k) => k,
