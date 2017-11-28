@@ -6,6 +6,10 @@ exhaustiveness. Instead, implementations should be added on an as-needed basis.
 
 #![deny(missing_docs)]
 
+extern crate fst;
+#[macro_use]
+extern crate lazy_static;
+
 mod tables;
 
 mod hangul;

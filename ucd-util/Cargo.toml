@@ -11,3 +11,10 @@ repository = "https://github.com/BurntSushi/rucd"
 readme = "README.md"
 keywords = ["unicode", "database", "character", "property"]
 license = "Unlicense/MIT"
+
+[dependencies]
+fst = { version = "0.2", default-features = false }
+lazy_static = "0.2"
+
+[profile.release]
+debug = true
