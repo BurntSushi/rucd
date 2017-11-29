@@ -17,7 +17,7 @@ license = "Unlicense/MIT"
 [dependencies]
 byteorder = "1"
 clap = "2"
-fst = { version = "0.2", default-features = false }
+fst = { version = "0.3", default-features = false }
 regex = "0.2"
 ucd-parse = { version = "0.0.1", path = "../ucd-parse" }
 ucd-trie = { version = "0.0.1", path = "../ucd-trie" }
@@ -28,4 +28,3 @@ lazy_static = "0.2"
 
 [profile.release]
 debug = true
-codegen-units = 16

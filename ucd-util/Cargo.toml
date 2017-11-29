@@ -13,7 +13,8 @@ keywords = ["unicode", "database", "character", "property"]
 license = "Unlicense/MIT"
 
 [dependencies]
-fst = { version = "0.2", default-features = false }
+byteorder = "1"
+fst = { version = "0.3", default-features = false }
 lazy_static = "0.2"
 
 [profile.release]

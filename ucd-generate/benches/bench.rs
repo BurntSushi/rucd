@@ -6,6 +6,7 @@ extern crate fst;
 extern crate lazy_static;
 extern crate test;
 extern crate ucd_trie;
+extern crate ucd_util;
 
 use std::cmp::Ordering;
 
@@ -161,5 +162,21 @@ fn jamo_short_name_slice_linear(b: &mut Bencher) {
 
         let found = slice.iter().find(|p| p.0 == cp).unwrap();
         assert_eq!(found.1, name);
+    });
+}
+
+#[bench]
+fn case_fold_simple_slice(b: &mut Bencher) {
+    use ucd_util::simple_fold;
+    b.iter(|| {
+        assert_eq!(2, simple_fold('k').count())
+    });
+}
+
+#[bench]
+fn case_fold_simple_fst(b: &mut Bencher) {
+    use ucd_util::simple_fold_fst;
+    b.iter(|| {
+        assert_eq!(2, simple_fold_fst('k').count())
     });
 }

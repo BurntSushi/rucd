@@ -436,6 +436,14 @@ impl Writer {
             return err!("cannot emit codepoint multimaps as an FST");
         }
 
+        let mut map2: BTreeMap<u32, Vec<u32>> = BTreeMap::new();
+        for (&k, vs) in map {
+            let vs2 = vs.iter().cloned().collect();
+            map2.insert(k, vs2);
+        }
+        self.codepoint_to_codepoints(name, &map2)
+
+        /*
         self.header()?;
         self.separator()?;
 
@@ -449,6 +457,7 @@ impl Writer {
         self.ranges_slice(&name, &table)?;
         self.wtr.flush()?;
         Ok(())
+        */
     }
 
     /// Write a map that associates codepoints with a sequence of other
