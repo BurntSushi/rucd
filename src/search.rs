@@ -14,6 +14,8 @@ use tables::fst::names::NAMES;
 
 pub fn command(args: &clap::ArgMatches) -> Result<()> {
     let mut search_builder = SearchBuilder::new();
+    search_builder
+        .case_insensitive(!args.is_present("case-sensitive"));
 
     if let Some(os_pat) = args.value_of_os("pattern") {
         search_builder.pattern(Some(pattern_to_str(os_pat)?));
@@ -21,6 +23,11 @@ pub fn command(args: &clap::ArgMatches) -> Result<()> {
 
     let searcher = search_builder.build()?;
     let results = ResultSink::from_search(searcher);
+    if !args.is_present("allow-large") && results.len() > 10_000 {
+        return err!("{} results found, which is too large to print. \
+                     Pass the -A flag to forcefully print them.",
+                     results.len());
+    }
     let mut wtr = ShortWriter::new(io::stdout());
     for cp in results.codepoints {
         wtr.write_codepoint(cp)?;
@@ -39,6 +46,10 @@ impl ResultSink {
         ResultSink {
             codepoints: search.collect(),
         }
+    }
+
+    fn len(&self) -> usize {
+        self.codepoints.len()
     }
 }
 

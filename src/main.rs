@@ -9,7 +9,6 @@ extern crate lazy_static;
 extern crate regex;
 extern crate tabwriter;
 extern crate ucd_util;
-extern crate unicode_width;
 
 use std::process;
 
@@ -32,12 +31,13 @@ mod app;
 mod codepoint;
 mod display;
 mod error;
+mod list;
 mod name;
 mod search;
 mod tables;
 
 fn main() {
-    if let Err(err) = run() {
+    if let Err(err) = try_main() {
         if err.is_broken_pipe() {
             process::exit(0);
         }
@@ -46,11 +46,17 @@ fn main() {
     }
 }
 
-fn run() -> Result<()> {
+fn try_main() -> Result<()> {
     let matches = app::app().get_matches();
     match matches.subcommand() {
         ("search", Some(m)) => {
             search::command(m)
+        }
+        ("list-properties", Some(m)) => {
+            list::command_list_properties(m)
+        }
+        ("list-property-values", Some(m)) => {
+            list::command_list_property_values(m)
         }
         ("", _) => {
             app::app().print_help()?;

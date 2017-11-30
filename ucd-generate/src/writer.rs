@@ -381,7 +381,7 @@ impl Writer {
             }
             first = false;
 
-            self.wtr.write_str(&format!("({:?}, [", k1))?;
+            self.wtr.write_str(&format!("({:?}, &[", k1))?;
             for (k2, v) in kv {
                 self.wtr.write_str(&format!("({:?}, {:?}), ", k2, v))?;
             }
@@ -442,22 +442,6 @@ impl Writer {
             map2.insert(k, vs2);
         }
         self.codepoint_to_codepoints(name, &map2)
-
-        /*
-        self.header()?;
-        self.separator()?;
-
-        let name = rust_const_name(name);
-        let mut table = vec![];
-        for (&k, vs) in map {
-            for &v in vs {
-                table.push((k, v));
-            }
-        }
-        self.ranges_slice(&name, &table)?;
-        self.wtr.flush()?;
-        Ok(())
-        */
     }
 
     /// Write a map that associates codepoints with a sequence of other

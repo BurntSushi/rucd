@@ -17,7 +17,7 @@ pub fn character_name_normalize(string: &mut String) {
 /// of `slice`.
 ///
 /// See: http://unicode.org/reports/tr44/#UAX44-LM2
-pub fn character_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
+fn character_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
     // According to Unicode 4.8, character names consist only of Latin
     // capital letters A to Z, ASCII digits, ASCII space or ASCII hypen.
     // Therefore, we can do very simplistic case folding and operate on the
@@ -89,7 +89,7 @@ pub fn symbolic_name_normalize(string: &mut String) {
 /// of `slice`.
 ///
 /// See: http://unicode.org/reports/tr44/#UAX44-LM3
-pub fn symbolic_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
+fn symbolic_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
     // I couldn't find a place in the standard that specified that property
     // names/aliases had a particular structure (unlike character names), but
     // we assume that it's ASCII only and drop anything that isn't ASCII.

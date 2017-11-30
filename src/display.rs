@@ -34,9 +34,8 @@ impl<W: io::Write> ShortWriter<W> {
         let utf8 = utf8_hex(cp).unwrap_or("".to_string());
         writeln!(
             self.wtr,
-            "U+{:04X}\t{}\t{}\t{}\t{}",
-            cp.value(), scalar, utf8, name,
-            ::unicode_width::UnicodeWidthStr::width_cjk(&*scalar))?;
+            "U+{:04X}\t{}\t{}\t{}",
+            cp.value(), scalar, utf8, name)?;
         Ok(())
     }
 

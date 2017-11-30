@@ -17,6 +17,7 @@ mod case;
 mod hangul;
 mod ideograph;
 mod name;
+mod property;
 
 pub use case::{
     SimpleFoldIter, SimpleFoldFstIter,
@@ -26,7 +27,8 @@ pub use hangul::{
     RANGE_HANGUL_SYLLABLE, hangul_name, hangul_full_canonical_decomposition,
 };
 pub use ideograph::{RANGE_IDEOGRAPH, ideograph_name};
-pub use name::{
-    character_name_normalize, character_name_normalize_bytes,
-    symbolic_name_normalize, symbolic_name_normalize_bytes,
+pub use name::{character_name_normalize, symbolic_name_normalize};
+pub use property::{
+    PropertyTable, PropertyValueTable, PropertyValues,
+    canonical_property_name, property_values, canonical_property_value,
 };
