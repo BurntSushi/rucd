@@ -14,9 +14,9 @@ use error::Error;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Property {
     /// The codepoint or codepoint range for this entry.
-    codepoints: Codepoints,
+    pub codepoints: Codepoints,
     /// The property name assigned to the codepoints in this entry.
-    property: String,
+    pub property: String,
 }
 
 impl UcdFile for Property {

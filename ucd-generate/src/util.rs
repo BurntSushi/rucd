@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::str;
 
@@ -6,6 +6,49 @@ use ucd_parse::{PropertyAlias, PropertyValueAlias};
 use ucd_util;
 
 use error::Result;
+
+/// Filter is an include/exclude filter of strings specified on the command
+/// line via --include and --exclude flags.
+#[derive(Clone, Debug)]
+pub struct Filter {
+    include: BTreeSet<String>,
+    exclude: BTreeSet<String>,
+}
+
+impl Filter {
+    /// Create a new include/exclude filter from the given lists.
+    ///
+    /// Each list should be a comma separated list of property names (or
+    /// values), and they may be aliases. The canonicalization function given
+    /// should convert all such values into their canonical form.
+    pub fn new<F: FnMut(&str) -> Result<String>>(
+        include_list: Option<String>,
+        exclude_list: Option<String>,
+        mut canonicalize: F,
+    ) -> Result<Filter> {
+        let (mut include, mut exclude) = (BTreeSet::new(), BTreeSet::new());
+        if let Some(include_list) = include_list {
+            for name in include_list.split(",") {
+                include.insert(canonicalize(name.trim())?.to_string());
+            }
+        }
+        if let Some(exclude_list) = exclude_list {
+            for name in exclude_list.split(",") {
+                exclude.insert(canonicalize(name.trim())?.to_string());
+            }
+        }
+        Ok(Filter { include, exclude })
+    }
+
+    /// Whether the given name passes this filter or not.
+    pub fn contains(&self, name: &str) -> bool {
+        if self.exclude.contains(name) {
+            false
+        } else {
+            self.include.is_empty() || self.include.contains(name)
+        }
+    }
+}
 
 /// A map from property name (including aliases) to a "canonical" or "long"
 /// version of the property name.
@@ -38,11 +81,11 @@ impl PropertyNames {
 
     /// Return the "canonical" or "long" property name for the given property
     /// name. If no such property exists, return an error.
-    pub fn canonical<'a>(&'a self, key: &str) -> Result<&'a str> {
+    pub fn canonical(&self, key: &str) -> Result<String> {
         let mut key = key.to_string();
         ucd_util::symbolic_name_normalize(&mut key);
         match self.0.get(&key).map(|v| &**v) {
-            Some(v) => Ok(v),
+            Some(v) => Ok(v.to_string()),
             None => err!("unrecognized property: {:?}", key),
         }
     }
@@ -108,16 +151,16 @@ impl PropertyValues {
     ///
     /// Note that this does not apply to "string" or "miscellaneous" properties
     /// such as `Name` or `Case_Folding`.
-    pub fn canonical<'a>(
-        &'a self,
+    pub fn canonical(
+        &self,
         property: &str,
         value: &str,
-    ) -> Result<&'a str> {
+    ) -> Result<String> {
         let property = self.property.canonical(property)?;
         let mut value = value.to_string();
         ucd_util::symbolic_name_normalize(&mut value);
         match self.value.get(&*property).and_then(|m| m.get(&value)) {
-            Some(v) => Ok(v),
+            Some(v) => Ok(v.to_string()),
             None => err!(
                 "unrecognized property name/value: {:?}", (property, value)),
         }

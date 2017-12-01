@@ -208,7 +208,9 @@ impl<R: io::Read, D: FromStr<Err=Error>> Iterator for UcdLineParser<R, D> {
 /// A representation of either a single codepoint or a range of codepoints.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Codepoints {
+    /// A single codepoint.
     Single(Codepoint),
+    /// A range of codepoints.
     Range(CodepointRange),
 }
 
@@ -291,7 +293,9 @@ impl PartialEq<(Codepoint, Codepoint)> for Codepoints {
 /// range are guaranteed to be valid codepoints.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct CodepointRange {
+    /// The start of the codepoint range.
     pub start: Codepoint,
+    /// The end of the codepoint range.
     pub end: Codepoint,
 }
 

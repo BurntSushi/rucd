@@ -4,6 +4,7 @@ use std::ops;
 use clap;
 
 use error::Result;
+use util::Filter;
 use writer::{Writer, WriterBuilder};
 
 /// Wraps clap matches and provides convenient accessors to various parameters.
@@ -40,5 +41,19 @@ impl<'a> ArgMatches<'a> {
 
     pub fn name(&self) -> &str {
         self.value_of("name").expect("the name of the table")
+    }
+
+    /// Create a new include/exclude filter command line arguments.
+    ///
+    /// The given canonicalization function is applied to each element in
+    /// each of the include/exclude lists provided by the end user.
+    pub fn filter<F: FnMut(&str) -> Result<String>>(
+        &self,
+        mut canonicalize: F,
+    ) -> Result<Filter> {
+        Filter::new(
+            self.value_of_lossy("include").map(|s| s.to_string()),
+            self.value_of_lossy("exclude").map(|s| s.to_string()),
+            |name| canonicalize(name))
     }
 }

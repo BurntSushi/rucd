@@ -13,6 +13,9 @@ readme = "README.md"
 keywords = ["unicode", "database", "character", "search", "fst"]
 license = "Unlicense/MIT"
 
+[workspace]
+members = ["ucd-generate", "ucd-parse", "ucd-trie", "ucd-util"]
+
 [dependencies]
 byteorder = "1"
 clap = "2"

@@ -37,6 +37,7 @@ mod case_folding;
 mod general_category;
 mod jamo_short_name;
 mod names;
+mod property_bool;
 
 fn main() {
     if let Err(err) = run() {
@@ -53,6 +54,9 @@ fn run() -> Result<()> {
     match matches.subcommand() {
         ("general-category", Some(m)) => {
             general_category::command(ArgMatches::new(m))
+        }
+        ("property-bool", Some(m)) => {
+            property_bool::command(ArgMatches::new(m))
         }
         ("jamo-short-name", Some(m)) => {
             jamo_short_name::command(ArgMatches::new(m))

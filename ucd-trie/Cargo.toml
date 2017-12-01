@@ -18,6 +18,3 @@ lazy_static = "0.2"
 [features]
 default = ["std"]
 std = []
-
-[profile.release]
-debug = true

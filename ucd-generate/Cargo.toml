@@ -25,6 +25,3 @@ ucd-util = { version = "0.0.1", path = "../ucd-util"  }
 
 [dev-dependencies]
 lazy_static = "0.2"
-
-[profile.release]
-debug = true

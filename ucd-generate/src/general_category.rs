@@ -9,6 +9,7 @@ use util::PropertyValues;
 pub fn command(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
     let propvals = PropertyValues::from_ucd_dir(&dir)?;
+    let filter = args.filter(|name| propvals.canonical("gc", name))?;
     let unexpanded = ucd_parse::parse(&dir)?;
 
     // If we were tasked with listing the available categories, then do that
@@ -32,25 +33,6 @@ pub fn command(args: ArgMatches) -> Result<()> {
         }
         return Ok(());
     }
-
-    // Determine our include/exclude rules.
-    let (mut include, mut exclude) = (BTreeSet::new(), BTreeSet::new());
-    if let Some(includes) = args.value_of_lossy("include") {
-        for name in includes.split(",") {
-            include.insert(propvals.canonical("gc", name.trim())?.to_string());
-        }
-    }
-    if let Some(excludes) = args.value_of_lossy("exclude") {
-        for name in excludes.split(",") {
-            exclude.insert(propvals.canonical("gc", name.trim())?.to_string());
-        }
-    }
-    let should_emit_cat = |name: &str| {
-        if exclude.contains(name) {
-            return false;
-        }
-        include.is_empty() || include.contains(name)
-    };
 
     // Expand all of our UnicodeData rows. This results in one big list of
     // all assigned codepoints.
@@ -84,7 +66,7 @@ pub fn command(args: ArgMatches) -> Result<()> {
     // is not true if we include related categories.
     if !args.is_present("enum") {
         for (name, set) in related(&propvals, &bycat) {
-            if should_emit_cat(&name) {
+            if filter.contains(&name) {
                 bycat.insert(name, set);
             }
         }
@@ -92,7 +74,7 @@ pub fn command(args: ArgMatches) -> Result<()> {
     // Finally, filter out any sets according to what the user asked for.
     let bycat = bycat
         .into_iter()
-        .filter(|&(ref name, _)| should_emit_cat(name))
+        .filter(|&(ref name, _)| filter.contains(name))
         .collect();
 
     let mut wtr = args.writer("general_category")?;
