@@ -11,9 +11,9 @@ use error::Error;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Script {
     /// The codepoint or codepoint range for this entry.
-    codepoints: Codepoints,
+    pub codepoints: Codepoints,
     /// The script name assigned to the codepoints in this entry.
-    script: String,
+    pub script: String,
 }
 
 impl UcdFile for Script {

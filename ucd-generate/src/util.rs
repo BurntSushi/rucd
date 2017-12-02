@@ -237,3 +237,27 @@ pub fn range_value_add(
     }
     ranges.push((codepoint, codepoint, value));
 }
+
+/// Print the property values (and their aliases) for the given property.
+pub fn print_property_values(
+    propvals: &PropertyValues,
+    property: &str,
+) -> Result<()> {
+    let by_alias = propvals.values(property)?;
+    // We basically need to reverse the mapping. Namely, we're given
+    //
+    //     alias |--> canonical
+    //
+    // But we want
+    //
+    //     canonical |--> [alias]
+    let mut by_canonical: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for (alias, canonical) in by_alias {
+        by_canonical.entry(&**canonical).or_insert(vec![]).push(&**alias);
+    }
+    for (canonical, mut aliases) in by_canonical {
+        aliases.sort();
+        println!("{} (aliases: {})", canonical, aliases.join(", "));
+    }
+    Ok(())
+}

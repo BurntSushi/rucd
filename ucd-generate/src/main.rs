@@ -38,6 +38,7 @@ mod general_category;
 mod jamo_short_name;
 mod names;
 mod property_bool;
+mod script;
 
 fn main() {
     if let Err(err) = run() {
@@ -54,6 +55,12 @@ fn run() -> Result<()> {
     match matches.subcommand() {
         ("general-category", Some(m)) => {
             general_category::command(ArgMatches::new(m))
+        }
+        ("script", Some(m)) => {
+            script::command_script(ArgMatches::new(m))
+        }
+        ("script-extension", Some(m)) => {
+            script::command_script_extension(ArgMatches::new(m))
         }
         ("property-bool", Some(m)) => {
             property_bool::command(ArgMatches::new(m))

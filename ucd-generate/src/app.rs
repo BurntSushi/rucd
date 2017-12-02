@@ -39,6 +39,16 @@ general-category produces one table of Unicode codepoint ranges for each
 possible General_Category value.
 ";
 
+const ABOUT_SCRIPT: &'static str = "\
+script produces one table of Unicode codepoint ranges for each possible Script
+value.
+";
+
+const ABOUT_SCRIPT_EXTENSION: &'static str = "\
+script-extension produces one table of Unicode codepoint ranges for each
+possible Script_Extension value.
+";
+
 const ABOUT_PROP_BOOL: &'static str = "\
 property-bool produces possibly many tables for boolean properties. Tables can
 be emitted as a sorted sequence of ranges, an FST or a trie.
@@ -142,6 +152,58 @@ pub fn app() -> App<'static, 'static> {
         .arg(Arg::with_name("list-categories")
             .long("list-categories")
             .help("List all of the category names with abbreviations."));
+    let cmd_script = SubCommand::with_name("script")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create the Script property tables.")
+        .before_help(ABOUT_SCRIPT)
+        .arg(ucd_dir.clone())
+        .arg(flag_fst_dir.clone())
+        .arg(flag_name("SCRIPT"))
+        .arg(flag_chars.clone())
+        .arg(flag_trie_set.clone())
+        .arg(Arg::with_name("include")
+            .long("include")
+            .takes_value(true)
+            .help("A comma separated list of scripts to include. \
+                   When absent, all scripts are included."))
+        .arg(Arg::with_name("exclude")
+            .long("exclude")
+            .takes_value(true)
+            .help("A comma separated list of scripts to exclude. \
+                   When absent, no scripts are excluded. This overrides \
+                   scripts specified with the --include flag."))
+        .arg(Arg::with_name("list-scripts")
+            .long("list-scripts")
+            .help("List all of the script names with abbreviations."));
+    let cmd_script_extension = SubCommand::with_name("script-extension")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create the Script_Extension property tables.")
+        .before_help(ABOUT_SCRIPT_EXTENSION)
+        .arg(ucd_dir.clone())
+        .arg(flag_fst_dir.clone())
+        .arg(flag_name("SCRIPT_EXTENSION"))
+        .arg(flag_chars.clone())
+        .arg(flag_trie_set.clone())
+        .arg(Arg::with_name("include")
+            .long("include")
+            .takes_value(true)
+            .help("A comma separated list of script extensions to include. \
+                   When absent, all scripts extensions are included."))
+        .arg(Arg::with_name("exclude")
+            .long("exclude")
+            .takes_value(true)
+            .help("A comma separated list of script extensions to exclude. \
+                   When absent, no script extensions are excluded. This \
+                   overrides script extensions specified with the --include \
+                   flag."))
+        .arg(Arg::with_name("list-script-extensions")
+            .long("list-script-extensions")
+            .help("List all of the script extension names with \
+                   abbreviations."));
     let cmd_prop_bool = SubCommand::with_name("property-bool")
         .author(crate_authors!())
         .version(crate_version!())
@@ -261,6 +323,8 @@ pub fn app() -> App<'static, 'static> {
         .max_term_width(100)
         .setting(AppSettings::UnifiedHelpMessage)
         .subcommand(cmd_general_category)
+        .subcommand(cmd_script)
+        .subcommand(cmd_script_extension)
         .subcommand(cmd_prop_bool)
         .subcommand(cmd_jamo_short_name)
         .subcommand(cmd_names)

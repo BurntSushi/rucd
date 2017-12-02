@@ -4,7 +4,7 @@ use ucd_parse::{self, UnicodeDataExpander};
 
 use args::ArgMatches;
 use error::Result;
-use util::PropertyValues;
+use util::{PropertyValues, print_property_values};
 
 pub fn command(args: ArgMatches) -> Result<()> {
     let dir = args.ucd_dir()?;
@@ -15,23 +15,7 @@ pub fn command(args: ArgMatches) -> Result<()> {
     // If we were tasked with listing the available categories, then do that
     // and quit.
     if args.is_present("list-categories") {
-        let by_alias = propvals.values("gc")?;
-        // We basically need to reverse the mapping. Namely, we're given
-        //
-        //     alias |--> canonical
-        //
-        // But we want
-        //
-        //     canonical |--> [alias]
-        let mut by_canonical: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
-        for (alias, canonical) in by_alias {
-            by_canonical.entry(&**canonical).or_insert(vec![]).push(&**alias);
-        }
-        for (canonical, mut aliases) in by_canonical {
-            aliases.sort();
-            println!("{} (aliases: {})", canonical, aliases.join(", "));
-        }
-        return Ok(());
+        return print_property_values(&propvals, "General_Category");
     }
 
     // Expand all of our UnicodeData rows. This results in one big list of

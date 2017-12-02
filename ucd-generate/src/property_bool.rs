@@ -36,6 +36,18 @@ pub fn command(args: ArgMatches) -> Result<()> {
     // Even still, others like Composition_Exclusion have their own file
     // (CompositionExclusions.txt).
 
+    // BREADCRUMBS:
+    //
+    // OK, at this point, we can generate lots of interesting boolean
+    // properties, which is probably enough to craft a useful search
+    // interface in rucd. One other thing we need is scripts and script
+    // extensions, so do that next.
+    //
+    // It seems like we could avoid a lot of repeated work if we farm out the
+    // property handling to the new regex-syntax rewrite, and then basically
+    // make the search interface be a regex. That way we should be able to
+    // reuse character class set notation.
+
     if args.is_present("list-properties") {
         for name in by_name.keys() {
             println!("{}", name);
