@@ -65,6 +65,9 @@ fn run() -> Result<()> {
         ("property-bool", Some(m)) => {
             property_bool::command(ArgMatches::new(m))
         }
+        ("perl-word", Some(m)) => {
+            property_bool::command_perl_word(ArgMatches::new(m))
+        }
         ("jamo-short-name", Some(m)) => {
             jamo_short_name::command(ArgMatches::new(m))
         }
@@ -93,24 +96,41 @@ fn run() -> Result<()> {
 }
 
 fn cmd_property_names(args: ArgMatches) -> Result<()> {
+    use std::collections::BTreeMap;
     use util::PropertyNames;
 
     let dir = args.ucd_dir()?;
     let names = PropertyNames::from_ucd_dir(&dir)?;
+    let filter = args.filter(|name| names.canonical(name))?;
 
+    let mut actual_names = BTreeMap::new();
+    for (k, v) in &names.0 {
+        if filter.contains(v) {
+            actual_names.insert(k.to_string(), v.to_string());
+        }
+    }
     let mut wtr = args.writer("property_names")?;
-    wtr.string_to_string(args.name(), &names.0)?;
+    wtr.string_to_string(args.name(), &actual_names)?;
     Ok(())
 }
 
 fn cmd_property_values(args: ArgMatches) -> Result<()> {
-    use util::PropertyValues;
+    use std::collections::BTreeMap;
+    use util::{PropertyNames, PropertyValues};
 
     let dir = args.ucd_dir()?;
     let values = PropertyValues::from_ucd_dir(&dir)?;
+    let names = PropertyNames::from_ucd_dir(&dir)?;
+    let filter = args.filter(|name| names.canonical(name))?;
 
+    let mut actual_values = BTreeMap::new();
+    for (k, v) in &values.value {
+        if filter.contains(k) {
+            actual_values.insert(k.to_string(), v.clone());
+        }
+    }
     let mut wtr = args.writer("property_values")?;
-    wtr.string_to_string_to_string(args.name(), &values.value)?;
+    wtr.string_to_string_to_string(args.name(), &actual_values)?;
     Ok(())
 }
 

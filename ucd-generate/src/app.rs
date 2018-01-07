@@ -54,6 +54,19 @@ property-bool produces possibly many tables for boolean properties. Tables can
 be emitted as a sorted sequence of ranges, an FST or a trie.
 ";
 
+const ABOUT_PERL_WORD: &'static str = "\
+perl-word emits a table of codepoints in Unicode's definition of the \\w
+character class, according to Annex C in UTS#18. In particular, this includes
+the Alphabetic and Join_Control properties, in addition to the Decimal_Number,
+Mark and Connector_Punctuation general categories.
+
+Commands for \\s and \\d are not provided, since they directly correspond
+to the property Whitespace and the general category Decimal_Number,
+respectively.
+
+The flags for this command are similar as the flags for property-bool.
+";
+
 const ABOUT_JAMO_SHORT_NAME: &'static str = "\
 jamo-short-name parses the UCD's Jamo.txt file and emits its contents as a
 slice table. The slice consists of a sorted sequences of pairs, where each
@@ -229,6 +242,17 @@ pub fn app() -> App<'static, 'static> {
             .long("list-properties")
             .help("List the properties that can be generated with this \
                    command."));
+    let cmd_perl_word = SubCommand::with_name("perl-word")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create a boolean property table for the \\w character class.")
+        .before_help(ABOUT_PERL_WORD)
+        .arg(ucd_dir.clone())
+        .arg(flag_fst_dir.clone())
+        .arg(flag_chars.clone())
+        .arg(flag_trie_set.clone())
+        .arg(flag_name("PERL_WORD"));
     let cmd_jamo_short_name = SubCommand::with_name("jamo-short-name")
         .author(crate_authors!())
         .version(crate_version!())
@@ -279,7 +303,19 @@ pub fn app() -> App<'static, 'static> {
         .about("Create the canonical property name table.")
         .before_help(ABOUT_PROPERTY_NAMES)
         .arg(ucd_dir.clone())
-        .arg(flag_name("PROPERTY_NAMES"));
+        .arg(flag_name("PROPERTY_NAMES"))
+        .arg(Arg::with_name("include")
+            .long("include")
+            .takes_value(true)
+            .help("A comma separated list of property names to include. \
+                   When absent, all property names are included."))
+        .arg(Arg::with_name("exclude")
+            .long("exclude")
+            .takes_value(true)
+            .help("A comma separated list of property names to exclude. \
+                   When absent, no property names are excluded. This \
+                   overrides property names specified with the --include \
+                   flag."));
     let cmd_property_values = SubCommand::with_name("property-values")
         .author(crate_authors!())
         .version(crate_version!())
@@ -287,7 +323,20 @@ pub fn app() -> App<'static, 'static> {
         .about("Create the canonical property value table.")
         .before_help(ABOUT_PROPERTY_VALUES)
         .arg(ucd_dir.clone())
-        .arg(flag_name("PROPERTY_VALUES"));
+        .arg(flag_name("PROPERTY_VALUES"))
+        .arg(Arg::with_name("include")
+            .long("include")
+            .takes_value(true)
+            .help("A comma separated list of property names to include. \
+                   When absent, all property values for all properties are \
+                   included."))
+        .arg(Arg::with_name("exclude")
+            .long("exclude")
+            .takes_value(true)
+            .help("A comma separated list of property names to exclude. \
+                   When absent, no property values are excluded. This \
+                   overrides property names specified with the --include \
+                   flag."));
     let cmd_case_folding_simple = SubCommand::with_name("case-folding-simple")
         .author(crate_authors!())
         .version(crate_version!())
@@ -326,6 +375,7 @@ pub fn app() -> App<'static, 'static> {
         .subcommand(cmd_script)
         .subcommand(cmd_script_extension)
         .subcommand(cmd_prop_bool)
+        .subcommand(cmd_perl_word)
         .subcommand(cmd_jamo_short_name)
         .subcommand(cmd_names)
         .subcommand(cmd_property_names)

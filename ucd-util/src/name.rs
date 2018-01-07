@@ -126,7 +126,10 @@ fn symbolic_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
 
 #[cfg(test)]
 mod tests {
-    use super::{character_name_normalize, symbolic_name_normalize};
+    use super::{
+        character_name_normalize, character_name_normalize_bytes,
+        symbolic_name_normalize, symbolic_name_normalize_bytes,
+    };
 
     fn char_norm(s: &str) -> String {
         let mut s = s.to_string();
@@ -159,5 +162,19 @@ mod tests {
         assert_eq!(sym_norm("Greek"), "greek");
         assert_eq!(sym_norm("isGreek"), "greek");
         assert_eq!(sym_norm("IS_Greek"), "greek");
+    }
+
+    #[test]
+    fn valid_utf8_character() {
+        let mut x = b"abc\xFFxyz".to_vec();
+        let y = character_name_normalize_bytes(&mut x);
+        assert_eq!(y, b"abcxyz");
+    }
+
+    #[test]
+    fn valid_utf8_symbolic() {
+        let mut x = b"abc\xFFxyz".to_vec();
+        let y = symbolic_name_normalize_bytes(&mut x);
+        assert_eq!(y, b"abcxyz");
     }
 }

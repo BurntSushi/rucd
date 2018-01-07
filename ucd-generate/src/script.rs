@@ -25,6 +25,7 @@ pub fn command_script(args: ArgMatches) -> Result<()> {
     }
 
     let mut wtr = args.writer("script")?;
+    wtr.names(by_name.keys())?;
     for (name, set) in by_name {
         if filter.contains(&name) {
             wtr.ranges(&name, &set)?;
@@ -72,6 +73,7 @@ pub fn command_script_extension(args: ArgMatches) -> Result<()> {
     }
 
     let mut wtr = args.writer("script_extension")?;
+    wtr.names(by_name.keys())?;
     for (name, set) in by_name {
         if filter.contains(&name) {
             wtr.ranges(&name, &set)?;

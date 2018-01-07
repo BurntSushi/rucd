@@ -9,3 +9,4 @@ scratch*
 bench_large/huge
 x
 perf.data*
+tmp

@@ -24,4 +24,4 @@ ucd-trie = { version = "0.0.1", path = "../ucd-trie" }
 ucd-util = { version = "0.0.1", path = "../ucd-util"  }
 
 [dev-dependencies]
-lazy_static = "0.2"
+lazy_static = "1"

@@ -20,7 +20,7 @@ members = ["ucd-generate", "ucd-parse", "ucd-trie", "ucd-util"]
 byteorder = "1"
 clap = "2"
 fst = { version = "0.3", default-features = false }
-lazy_static = "0.2"
+lazy_static = "1"
 regex = "0.2"
 tabwriter = "1"
 ucd-util = { version = "0.0.1", path = "ucd-util" }

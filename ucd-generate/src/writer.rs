@@ -138,6 +138,42 @@ pub struct Writer {
 }
 
 impl Writer {
+    /// Write a sorted sequence of string names that map to Unicode set names.
+    pub fn names<I: IntoIterator<Item=T>, T: AsRef<str>>(
+        &mut self,
+        names: I,
+    ) -> Result<()> {
+        self.header()?;
+        self.separator()?;
+
+        let ty =
+            if self.opts.fst_dir.is_some() {
+                "::fst::Set".to_string()
+            } else if self.opts.trie_set {
+                "&'static ::ucd_trie::TrieSet".to_string()
+            } else {
+                let charty = self.rust_codepoint_type();
+                format!("&'static [({}, {})]", charty, charty)
+            };
+
+        let mut names: Vec<String> = names
+            .into_iter()
+            .map(|name| name.as_ref().to_string())
+            .collect();
+        names.sort();
+
+        writeln!(
+            self.wtr,
+            "pub const BY_NAME: &'static [(&'static str, {})] = &[",
+            ty,
+        )?;
+        for name in names {
+            let rustname = rust_const_name(&name);
+            self.wtr.write_str(&format!("({:?}, {}), ", name, rustname))?;
+        }
+        writeln!(self.wtr, "];")?;
+        Ok(())
+    }
     /// Write a sorted sequence of codepoints.
     ///
     /// Note that the specific representation of ranges may differ with the
