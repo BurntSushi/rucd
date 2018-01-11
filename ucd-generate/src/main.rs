@@ -33,6 +33,7 @@ mod error;
 mod util;
 mod writer;
 
+mod age;
 mod case_folding;
 mod general_category;
 mod jamo_short_name;
@@ -64,6 +65,9 @@ fn run() -> Result<()> {
         }
         ("property-bool", Some(m)) => {
             property_bool::command(ArgMatches::new(m))
+        }
+        ("age", Some(m)) => {
+            age::command(ArgMatches::new(m))
         }
         ("perl-word", Some(m)) => {
             property_bool::command_perl_word(ArgMatches::new(m))

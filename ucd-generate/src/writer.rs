@@ -174,6 +174,7 @@ impl Writer {
         writeln!(self.wtr, "];")?;
         Ok(())
     }
+
     /// Write a sorted sequence of codepoints.
     ///
     /// Note that the specific representation of ranges may differ with the
@@ -841,7 +842,9 @@ fn rust_const_name(s: &str) -> String {
     // Property names/values seem pretty uniform, particularly the
     // "canonical" variants we use to produce variable names. So we
     // don't need to do much.
-    let mut s = s.to_string();
+    //
+    // N.B. Age names have a `.` in them, so get rid of that.
+    let mut s = s.replace('.', "_").to_string();
     s.make_ascii_uppercase();
     s
 }

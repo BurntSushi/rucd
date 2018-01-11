@@ -49,6 +49,12 @@ script-extension produces one table of Unicode codepoint ranges for each
 possible Script_Extension value.
 ";
 
+const ABOUT_AGE: &'static str = "\
+age produces a table for each discrete Unicode age. Each table includes the
+codepoints that were added for that age. Tables can be emitted as a sorted
+sequence of ranges, an FST or a trie.
+";
+
 const ABOUT_PROP_BOOL: &'static str = "\
 property-bool produces possibly many tables for boolean properties. Tables can
 be emitted as a sorted sequence of ranges, an FST or a trie.
@@ -217,6 +223,20 @@ pub fn app() -> App<'static, 'static> {
             .long("list-script-extensions")
             .help("List all of the script extension names with \
                    abbreviations."));
+    let cmd_age = SubCommand::with_name("age")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .template(TEMPLATE_SUB)
+        .about("Create Unicode Age tables.")
+        .before_help(ABOUT_AGE)
+        .arg(ucd_dir.clone())
+        .arg(flag_fst_dir.clone())
+        .arg(flag_chars.clone())
+        .arg(flag_trie_set.clone())
+        .arg(Arg::with_name("list-properties")
+            .long("list-properties")
+            .help("List the properties that can be generated with this \
+                   command."));
     let cmd_prop_bool = SubCommand::with_name("property-bool")
         .author(crate_authors!())
         .version(crate_version!())
@@ -374,6 +394,7 @@ pub fn app() -> App<'static, 'static> {
         .subcommand(cmd_general_category)
         .subcommand(cmd_script)
         .subcommand(cmd_script_extension)
+        .subcommand(cmd_age)
         .subcommand(cmd_prop_bool)
         .subcommand(cmd_perl_word)
         .subcommand(cmd_jamo_short_name)

@@ -12,9 +12,9 @@ use error::Error;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Age {
     /// The codepoint or codepoint range for this entry.
-    codepoints: Codepoints,
+    pub codepoints: Codepoints,
     /// The age assigned to the codepoints in this entry.
-    age: String,
+    pub age: String,
 }
 
 impl UcdFile for Age {
