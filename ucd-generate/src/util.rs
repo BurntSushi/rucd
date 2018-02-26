@@ -128,6 +128,11 @@ impl PropertyValues {
             inner_map.insert(make_key(a.abbreviation), canon.clone());
             inner_map.insert(make_key(a.long), canon);
         }
+        // Special case Script_Extensions, which is just a copy of Script.
+        // It would probably be better to derive this from the UCD data files,
+        // but alas...
+        let scripts = outer_map["Script"].clone();
+        outer_map.insert("Script_Extensions".to_string(), scripts);
         Ok(PropertyValues { property: props, value: outer_map })
     }
 
