@@ -10,21 +10,17 @@ documentation = "https://github.com/BurntSushi/rucd"
 homepage = "https://github.com/BurntSushi/rucd"
 repository = "https://github.com/BurntSushi/rucd"
 readme = "README.md"
-keywords = ["unicode", "database", "character", "search", "fst"]
+keywords = ["unicode", "database", "character", "search"]
 license = "Unlicense/MIT"
-
-[workspace]
-members = ["ucd-generate", "ucd-parse", "ucd-trie", "ucd-util"]
 
 [dependencies]
 byteorder = "1"
 clap = "2"
 fst = { version = "0.3", default-features = false }
 lazy_static = "1"
-regex = "0.2"
+regex = "0.2.9"
 tabwriter = "1"
-ucd-util = { version = "0.0.1", path = "ucd-util" }
+ucd-util = "0.1"
 
 [profile.release]
 debug = true
-codegen-units = 32
